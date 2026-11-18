@@ -39,8 +39,10 @@ int Game::run() {
 
 void Game::play(engine::platform::Window& window, engine::render::Renderer& renderer) {
     bool running = true;
+    bool visible = true;
     while (running) {
-        for (const auto event : window.pollEvents()) {
+        // A hidden window is not drawn, so sleep until something happens instead of spinning.
+        for (const auto event : visible ? window.pollEvents() : window.waitEvents()) {
             switch (event) {
             case engine::platform::WindowEvent::CloseRequested:
             case engine::platform::WindowEvent::EscapePressed:
@@ -50,11 +52,14 @@ void Game::play(engine::platform::Window& window, engine::render::Renderer& rend
                 renderer.resize(window.pixelSize());
                 break;
             case engine::platform::WindowEvent::Hidden:
+                visible = false;
+                break;
             case engine::platform::WindowEvent::Shown:
+                visible = true;
                 break;
             }
         }
-        if (running) {
+        if (running && visible) {
             renderer.drawFrame(background);
         }
     }
