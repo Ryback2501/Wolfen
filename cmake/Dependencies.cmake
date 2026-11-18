@@ -37,13 +37,3 @@ FetchContent_Declare(
     SYSTEM)
 
 FetchContent_MakeAvailable(SDL3 bgfx_cmake Catch2)
-
-# bgfx also builds its Direct3D backends on Linux (for layers such as DXVK), so it reports them as
-# supported there although they cannot start on a normal Linux desktop. Direct3D is for Windows.
-# Setting any backend switch turns every other one off, so all the Linux backends are listed.
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_RENDERER_VULKAN=1
-                                            BGFX_CONFIG_RENDERER_OPENGL=1
-                                            BGFX_CONFIG_RENDERER_DIRECT3D11=0
-                                            BGFX_CONFIG_RENDERER_DIRECT3D12=0)
-endif()

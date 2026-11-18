@@ -67,6 +67,13 @@ std::vector<Backend> BgfxRenderer::supportedBackends() {
     std::vector<Backend> backends;
     for (std::size_t i = 0; i < count; ++i) {
         const Backend backend = backendOf(types.at(i));
+#ifndef _WIN32
+        // bgfx also builds Direct3D outside Windows (for layers such as DXVK) and reports it as
+        // supported, although it cannot start on a normal Linux desktop.
+        if (backend == Backend::Direct3D11 || backend == Backend::Direct3D12) {
+            continue;
+        }
+#endif
         if (backend != Backend::Other && std::ranges::find(backends, backend) == backends.end()) {
             backends.push_back(backend);
         }
@@ -88,8 +95,9 @@ BgfxRenderer::BgfxRenderer(const platform::Window& window, std::optional<Backend
     const Size size = window.pixelSize();
     bgfx::Init init;
     // The chosen backend and nothing else, or the best one for this computer with fallback.
-    init.type = only ? bgfxTypeOf(*only) : bgfx::RendererType::Count;
-    init.fallback = !only;
+    const bool chosen = only.has_value() && *only != Backend::Other;
+    init.type = chosen ? bgfxTypeOf(*only) : bgfx::RendererType::Count;
+    init.fallback = !chosen;
     init.platformData.type = native.kind == platform::NativeWindow::Kind::Wayland
                                  ? bgfx::NativeWindowHandleType::Wayland
                                  : bgfx::NativeWindowHandleType::Default;
