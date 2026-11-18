@@ -66,9 +66,16 @@ BgfxRenderer::BgfxRenderer(const platform::Window& window) {
         throw StartupError{"no renderer could start"};
     }
 
-    const bgfx::RendererType::Enum type = bgfx::getRendererType();
-    name_ = RendererName::display(backendOf(type), bgfx::getRendererName(type));
-    bgfx::setViewRect(mainView, 0, 0, bgfx::BackbufferRatio::Equal);
+    // From here bgfx is running: if anything below fails, the destructor will not run, so shut
+    // bgfx down here before the window it draws into goes away.
+    try {
+        const bgfx::RendererType::Enum type = bgfx::getRendererType();
+        name_ = RendererName::display(backendOf(type), bgfx::getRendererName(type));
+        bgfx::setViewRect(mainView, 0, 0, bgfx::BackbufferRatio::Equal);
+    } catch (...) {
+        bgfx::shutdown();
+        throw;
+    }
 }
 
 BgfxRenderer::~BgfxRenderer() {
