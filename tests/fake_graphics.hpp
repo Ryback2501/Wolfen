@@ -23,6 +23,8 @@ struct GraphicsRecord {
     std::vector<std::string> titles;
     std::vector<engine::Colour> frames;
     std::vector<engine::Size> resizes;
+    std::optional<engine::render::Backend>
+        requestedRenderer;              // as asked of the last startRenderer()
     int waits{};                        // how many times the game slept until the window had events
     std::string outputWhenWindowOpened; // what the game had printed when it opened the window
 };
@@ -116,7 +118,13 @@ class FakeGraphicsSystem final : public engine::app::GraphicsSystem {
     std::string rendererName{"Fake"};
     std::optional<std::string> windowFailure;   // when set, openWindow() fails with it
     std::optional<std::string> rendererFailure; // when set, startRenderer() fails with it
-    const std::ostringstream* watchedOutput{};  // when set, recorded when the window opens
+    std::vector<engine::render::Backend> available{engine::render::Backend::Vulkan,
+                                                   engine::render::Backend::OpenGL};
+    const std::ostringstream* watchedOutput{}; // when set, recorded when the window opens
+
+    [[nodiscard]] std::vector<engine::render::Backend> availableRenderers() const override {
+        return available;
+    }
 
     std::unique_ptr<engine::platform::Window>
     openWindow(const engine::platform::WindowSettings& settings) override {
@@ -132,7 +140,9 @@ class FakeGraphicsSystem final : public engine::app::GraphicsSystem {
     }
 
     std::unique_ptr<engine::render::Renderer>
-    startRenderer(engine::platform::Window& /*window*/) override {
+    startRenderer(engine::platform::Window& /*window*/,
+                  std::optional<engine::render::Backend> only) override {
+        record.requestedRenderer = only;
         record.steps.emplace_back("start renderer");
         if (rendererFailure) {
             throw engine::StartupError{*rendererFailure};

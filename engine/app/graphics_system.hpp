@@ -3,8 +3,11 @@
 
 #include "platform/window.hpp"
 #include "render/renderer.hpp"
+#include "render/renderer_name.hpp"
 
 #include <memory>
+#include <optional>
+#include <vector>
 
 namespace wolfen::engine::app {
 
@@ -22,9 +25,14 @@ class GraphicsSystem {
     // Throws StartupError when the window cannot be opened.
     virtual std::unique_ptr<platform::Window>
     openWindow(const platform::WindowSettings& settings) = 0;
-    // Throws StartupError when no renderer can start. The renderer must be destroyed before the
-    // window it draws into.
-    virtual std::unique_ptr<render::Renderer> startRenderer(platform::Window& window) = 0;
+    // The renderers this computer supports, among the ones Wolfen names (never Backend::Other).
+    // Needs no window.
+    [[nodiscard]] virtual std::vector<render::Backend> availableRenderers() const = 0;
+    // Starts the given renderer and no other one, or the best one for this computer (falling back
+    // to another if it fails) when none is given. Throws StartupError when it cannot start. The
+    // renderer must be destroyed before the window it draws into.
+    virtual std::unique_ptr<render::Renderer>
+    startRenderer(platform::Window& window, std::optional<render::Backend> only) = 0;
 };
 
 } // namespace wolfen::engine::app

@@ -20,6 +20,10 @@ Game::Game(std::ostream& out, std::ostream& err, engine::app::GraphicsSystem& gr
     : out_{&out}, err_{&err}, graphics_{&graphics} {}
 
 int Game::run() {
+    return run({});
+}
+
+int Game::run(std::span<const std::string_view> /*args*/) {
     const std::string name = "Wolfen " + std::string{engine::Version::current().text()};
     *out_ << name << '\n' << std::flush; // flushed, so it shows before the window opens
 
@@ -27,7 +31,7 @@ int Game::run() {
         // Declared in this order so the renderer is destroyed before the window it draws into.
         const auto window =
             graphics_->openWindow({.title = name, .size = windowSize, .resizable = true});
-        const auto renderer = graphics_->startRenderer(*window);
+        const auto renderer = graphics_->startRenderer(*window, std::nullopt);
         window->setTitle(name + " (" + std::string{renderer->name()} + ")");
         play(*window, *renderer);
     } catch (const engine::StartupError& error) {
