@@ -1,0 +1,24 @@
+---
+# CI installs a newer clang-tidy (21) than some local machines: code must pass the newest version.
+# Fix the code to standard C++ rather than turning a check off.
+Checks: >
+  -*,
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  clang-analyzer-*,
+  cppcoreguidelines-*,
+  -cppcoreguidelines-avoid-magic-numbers,
+  misc-*,
+  -misc-include-cleaner,
+  -misc-non-private-member-variables-in-classes,
+  modernize-*,
+  -modernize-use-trailing-return-type,
+  performance-*,
+  portability-*,
+  readability-*,
+  -readability-magic-numbers,
+  -readability-identifier-length
+WarningsAsErrors: '*'
+HeaderFilterRegex: '/(engine|game|tests)/'
+FormatStyle: file
+...
