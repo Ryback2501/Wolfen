@@ -1,0 +1,3 @@
+# Build output (the only build directory) and the staged game
+/build/
+/dist/
