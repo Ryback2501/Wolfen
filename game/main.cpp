@@ -1,3 +1,8 @@
+#include "game/game.hpp"
+
+#include <iostream>
+
 int main() {
-    return 0;
+    wolfen::game::Game game{std::cout};
+    return game.run();
 }

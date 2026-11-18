@@ -2,9 +2,20 @@
 
 #include <string_view>
 
-namespace wolfen {
+namespace wolfen::engine {
 
 // The project version, exactly as written in the VERSION file (for example "v0.0.1").
-std::string_view version();
+class Version {
+  public:
+    // The version this build was made from.
+    static Version current();
 
-} // namespace wolfen
+    [[nodiscard]] std::string_view text() const;
+
+  private:
+    explicit Version(std::string_view text);
+
+    std::string_view text_;
+};
+
+} // namespace wolfen::engine

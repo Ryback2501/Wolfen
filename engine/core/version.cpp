@@ -1,9 +1,15 @@
 #include "engine/core/version.hpp"
 
-namespace wolfen {
+namespace wolfen::engine {
 
-std::string_view version() {
-    return {};
+Version Version::current() {
+    return Version{{}};
 }
 
-} // namespace wolfen
+Version::Version(std::string_view text) : text_{text} {}
+
+std::string_view Version::text() const {
+    return text_;
+}
+
+} // namespace wolfen::engine
