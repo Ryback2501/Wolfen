@@ -1,5 +1,7 @@
 #include "game/game.hpp"
 
+#include "engine/core/version.hpp"
+
 #include <ostream>
 
 namespace wolfen::game {
@@ -7,7 +9,7 @@ namespace wolfen::game {
 Game::Game(std::ostream& out) : out_{&out} {}
 
 int Game::run() {
-    out_->flush();
+    *out_ << "Wolfen " << engine::Version::current().text() << '\n';
     return 0;
 }
 

@@ -1,9 +1,11 @@
 #include "engine/core/version.hpp"
 
+#include "engine/core/version_text.hpp"
+
 namespace wolfen::engine {
 
 Version Version::current() {
-    return Version{{}};
+    return Version{generated::versionText};
 }
 
 Version::Version(std::string_view text) : text_{text} {}
