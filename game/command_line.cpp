@@ -121,6 +121,10 @@ std::string CommandLine::usage(std::span<const Backend> available) {
            "While the game runs, press Esc to quit.\n";
 }
 
+std::string_view CommandLine::hint() {
+    return "Run 'wolfen --help' to see the available options.";
+}
+
 std::string_view CommandLine::optionName(Backend backend) {
     const auto* known = std::ranges::find(knownRenderers, backend, &NamedRenderer::backend);
     return known == knownRenderers.end() ? std::string_view{} : known->name;

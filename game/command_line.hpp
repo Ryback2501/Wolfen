@@ -29,6 +29,8 @@ class CommandLine {
 
     // The usage text, listing the renderers available on this computer.
     [[nodiscard]] static std::string usage(std::span<const engine::render::Backend> available);
+    // The one line shown after an option error, pointing to --help.
+    [[nodiscard]] static std::string_view hint();
     // The name of a renderer as written in --renderer, for example "vulkan".
     [[nodiscard]] static std::string_view optionName(engine::render::Backend backend);
 

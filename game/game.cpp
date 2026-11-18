@@ -39,7 +39,7 @@ int Game::run(std::span<const std::string_view> args) {
         *out_ << name << '\n';
         return 0;
     case CommandLine::Action::Error:
-        *err_ << options.error() << '\n' << CommandLine::usage(available);
+        *err_ << options.error() << '\n' << CommandLine::hint() << '\n';
         return 1;
     case CommandLine::Action::Run:
         break;
