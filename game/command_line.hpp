@@ -33,6 +33,9 @@ class CommandLine {
     [[nodiscard]] static std::string_view optionName(engine::render::Backend backend);
 
   private:
+    // Records the error to report.
+    void fail(std::string message);
+
     Action action_{Action::Run};
     std::optional<engine::render::Backend> renderer_;
     std::string error_;

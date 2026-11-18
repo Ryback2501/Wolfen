@@ -1,11 +1,14 @@
 #include "game.hpp"
 
+#include "command_line.hpp"
 #include "core/colour.hpp"
 #include "core/startup_error.hpp"
 #include "core/version.hpp"
 
+#include <memory>
 #include <ostream>
 #include <string>
+#include <vector>
 
 namespace wolfen::game {
 
@@ -23,15 +26,41 @@ int Game::run() {
     return run({});
 }
 
-int Game::run(std::span<const std::string_view> /*args*/) {
+int Game::run(std::span<const std::string_view> args) {
     const std::string name = "Wolfen " + std::string{engine::Version::current().text()};
-    *out_ << name << '\n' << std::flush; // flushed, so it shows before the window opens
+    const std::vector<engine::render::Backend> available = graphics_->availableRenderers();
+    const CommandLine options{args, available};
 
+    switch (options.action()) {
+    case CommandLine::Action::Help:
+        *out_ << CommandLine::usage(available);
+        return 0;
+    case CommandLine::Action::Version:
+        *out_ << name << '\n';
+        return 0;
+    case CommandLine::Action::Error:
+        *err_ << options.error() << '\n' << CommandLine::usage(available);
+        return 1;
+    case CommandLine::Action::Run:
+        break;
+    }
+
+    *out_ << name << '\n' << std::flush; // flushed, so it shows before the window opens
     try {
         // Declared in this order so the renderer is destroyed before the window it draws into.
         const auto window =
             graphics_->openWindow({.title = name, .size = windowSize, .resizable = true});
-        const auto renderer = graphics_->startRenderer(*window, std::nullopt);
+        std::unique_ptr<engine::render::Renderer> renderer;
+        try {
+            renderer = graphics_->startRenderer(*window, options.renderer());
+        } catch (const engine::StartupError&) {
+            if (!options.renderer()) {
+                throw;
+            }
+            *err_ << "Renderer '" << CommandLine::optionName(*options.renderer())
+                  << "' could not be started on this computer.\n";
+            return 1;
+        }
         window->setTitle(name + " (" + std::string{renderer->name()} + ")");
         play(*window, *renderer);
     } catch (const engine::StartupError& error) {
