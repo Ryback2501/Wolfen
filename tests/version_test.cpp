@@ -1,5 +1,5 @@
-#include "engine/core/version.hpp"
-#include "game/game.hpp"
+#include "core/version.hpp"
+#include "game.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 

@@ -1,6 +1,6 @@
-#include "game/game.hpp"
+#include "game.hpp"
 
-#include "engine/core/version.hpp"
+#include "core/version.hpp"
 
 #include <ostream>
 

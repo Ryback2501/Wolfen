@@ -1,6 +1,6 @@
-#include "engine/core/version.hpp"
+#include "core/version.hpp"
 
-#include "engine/core/version_text.hpp"
+#include "core/version_text.hpp"
 
 namespace wolfen::engine {
 
