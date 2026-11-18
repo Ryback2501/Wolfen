@@ -106,8 +106,9 @@ TEST_CASE("Esc ends the game with exit code 0", "[game]") {
 
 TEST_CASE("Resizing the window gives the renderer the new size in pixels", "[game]") {
     FakeGraphicsSystem graphics;
-    graphics.pixelSize = Size{.width = 1600, .height = 900};
-    graphics.events = {{WindowEvent::Resized}, {}};
+    graphics.pixelSize = Size{.width = 1280, .height = 720};
+    graphics.sizeAfterResize = Size{.width = 1600, .height = 900};
+    graphics.events = {{}, {WindowEvent::Resized}, {}};
     const GameRun run{graphics};
     REQUIRE(graphics.record.resizes == std::vector<Size>{Size{.width = 1600, .height = 900}});
 }

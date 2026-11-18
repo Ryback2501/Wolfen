@@ -32,8 +32,9 @@ class FakeWindow final : public engine::platform::Window {
   public:
     FakeWindow(GraphicsRecord& record,
                std::deque<std::vector<engine::platform::WindowEvent>> events,
-               engine::Size pixelSize)
-        : record_{&record}, events_{std::move(events)}, pixelSize_{pixelSize} {}
+               engine::Size pixelSize, engine::Size sizeAfterResize)
+        : record_{&record}, events_{std::move(events)}, pixelSize_{pixelSize},
+          sizeAfterResize_{sizeAfterResize} {}
     FakeWindow(const FakeWindow&) = delete;
     FakeWindow& operator=(const FakeWindow&) = delete;
     FakeWindow(FakeWindow&&) = delete;
@@ -48,6 +49,11 @@ class FakeWindow final : public engine::platform::Window {
         }
         auto batch = std::move(events_.front());
         events_.pop_front();
+        for (const auto event : batch) {
+            if (event == engine::platform::WindowEvent::Resized) {
+                pixelSize_ = sizeAfterResize_;
+            }
+        }
         return batch;
     }
     [[nodiscard]] engine::Size pixelSize() const override {
@@ -59,14 +65,12 @@ class FakeWindow final : public engine::platform::Window {
     [[nodiscard]] engine::platform::NativeWindow nativeWindow() const override {
         return {};
     }
-    void setPixelSize(engine::Size size) {
-        pixelSize_ = size;
-    }
 
   private:
     GraphicsRecord* record_;
     std::deque<std::vector<engine::platform::WindowEvent>> events_;
     engine::Size pixelSize_;
+    engine::Size sizeAfterResize_;
 };
 
 // A renderer that draws nothing and records every frame.
@@ -102,7 +106,8 @@ class FakeGraphicsSystem final : public engine::app::GraphicsSystem {
   public:
     GraphicsRecord record;
     std::deque<std::vector<engine::platform::WindowEvent>> events; // one batch per poll
-    engine::Size pixelSize{.width = 1280, .height = 720};
+    engine::Size pixelSize{.width = 1280, .height = 720};          // when the window opens
+    engine::Size sizeAfterResize{.width = 1280, .height = 720}; // from the first Resized event on
     std::string rendererName{"Fake"};
     std::optional<std::string> windowFailure;   // when set, openWindow() fails with it
     std::optional<std::string> rendererFailure; // when set, startRenderer() fails with it
@@ -118,7 +123,7 @@ class FakeGraphicsSystem final : public engine::app::GraphicsSystem {
         if (windowFailure) {
             throw engine::StartupError{*windowFailure};
         }
-        return std::make_unique<FakeWindow>(record, std::move(events), pixelSize);
+        return std::make_unique<FakeWindow>(record, std::move(events), pixelSize, sizeAfterResize);
     }
 
     std::unique_ptr<engine::render::Renderer>
