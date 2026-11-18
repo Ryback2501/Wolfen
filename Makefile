@@ -31,24 +31,30 @@ SOURCES := $(shell find engine game tests \( -name '*.cpp' -o -name '*.hpp' \) 2
 
 deps:
 	$(CMAKE_CONFIGURE)
+	touch $(CONFIGURED)
 	$(CMAKE_BUILD) --target SDL3-static bgfx Catch2WithMain
 
 # Configure once; after that CMake re-configures itself when a CMake file or VERSION changes.
-$(BUILD_DIR)/CMakeCache.txt:
-	$(CMAKE_CONFIGURE)
+# The marker is written only after a configure that succeeded, so a configure that failed halfway
+# (for example a network error while fetching) is run again next time.
+CONFIGURED := $(BUILD_DIR)/.configured
 
-build: $(BUILD_DIR)/CMakeCache.txt
+$(CONFIGURED):
+	$(CMAKE_CONFIGURE)
+	touch $(CONFIGURED)
+
+build: $(CONFIGURED)
 	$(CMAKE_BUILD)
 	cmake --install $(BUILD_DIR) --config $(CONFIG) --prefix $(DIST_DIR)
 
-test: $(BUILD_DIR)/CMakeCache.txt
+test: $(CONFIGURED)
 	$(CMAKE_BUILD)
 	ctest --test-dir $(BUILD_DIR) -C $(CONFIG) --output-on-failure --no-tests=error
 
 run: build
 	./$(DIST_DIR)/wolfen$(EXE) $(ARGS)
 
-lint: $(BUILD_DIR)/CMakeCache.txt
+lint: $(CONFIGURED)
 	clang-format --dry-run --Werror $(SOURCES)
 	clang-tidy -p $(BUILD_DIR) --quiet $(filter %.cpp,$(SOURCES))
 
