@@ -17,7 +17,12 @@ class Game {
     int run();
 
   private:
+    // The main loop: handles the window's events and draws a frame, until the game should end.
+    static void play(engine::platform::Window& window, engine::render::Renderer& renderer);
+
     std::ostream* out_;
+    std::ostream* err_;
+    engine::app::GraphicsSystem* graphics_;
 };
 
 } // namespace wolfen::game
