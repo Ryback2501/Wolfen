@@ -24,6 +24,26 @@ constexpr std::array<NamedRenderer, 5> knownRenderers{
      {.name = "d3d11", .backend = Backend::Direct3D11},
      {.name = "d3d12", .backend = Backend::Direct3D12}}};
 
+// The known renderer with this name or backend, or null. A plain loop returning a pointer, so the
+// code does not depend on whether the library's array iterators are pointers.
+const NamedRenderer* knownRenderer(std::string_view name) {
+    for (const NamedRenderer& known : knownRenderers) {
+        if (known.name == name) {
+            return &known;
+        }
+    }
+    return nullptr;
+}
+
+const NamedRenderer* knownRenderer(Backend backend) {
+    for (const NamedRenderer& known : knownRenderers) {
+        if (known.backend == backend) {
+            return &known;
+        }
+    }
+    return nullptr;
+}
+
 bool contains(std::span<const std::string_view> words, std::string_view word) {
     return std::ranges::find(words, word) != words.end();
 }
@@ -77,8 +97,8 @@ CommandLine::CommandLine(std::span<const std::string_view> args,
             return;
         }
         const std::string name{args[++i]};
-        const auto* known = std::ranges::find(knownRenderers, name, &NamedRenderer::name);
-        if (known == knownRenderers.end()) {
+        const NamedRenderer* known = knownRenderer(name);
+        if (known == nullptr) {
             fail("Unknown renderer '" + name + "'. Available: " + availableList(available));
             return;
         }
@@ -126,8 +146,8 @@ std::string_view CommandLine::hint() {
 }
 
 std::string_view CommandLine::optionName(Backend backend) {
-    const auto* known = std::ranges::find(knownRenderers, backend, &NamedRenderer::backend);
-    return known == knownRenderers.end() ? std::string_view{} : known->name;
+    const NamedRenderer* known = knownRenderer(backend);
+    return known == nullptr ? std::string_view{} : known->name;
 }
 
 } // namespace wolfen::game
