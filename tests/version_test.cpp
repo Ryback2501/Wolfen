@@ -1,4 +1,5 @@
 #include "core/version.hpp"
+#include "fake_graphics.hpp"
 #include "game.hpp"
 
 #include <catch2/catch_test_macros.hpp>
@@ -36,13 +37,17 @@ TEST_CASE("The version looks like vX.Y.Z", "[version]") {
 
 TEST_CASE("Running the game prints 'Wolfen <version>' on exactly one line", "[game]") {
     std::ostringstream out;
-    Game game{out};
+    std::ostringstream err;
+    wolfen::tests::FakeGraphicsSystem graphics;
+    Game game{out, err, graphics};
     game.run();
     REQUIRE(out.str() == "Wolfen " + versionFileText() + "\n");
 }
 
 TEST_CASE("Running the game ends with exit code 0", "[game]") {
     std::ostringstream out;
-    Game game{out};
+    std::ostringstream err;
+    wolfen::tests::FakeGraphicsSystem graphics;
+    Game game{out, err, graphics};
     REQUIRE(game.run() == 0);
 }
