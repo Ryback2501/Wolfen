@@ -128,12 +128,16 @@ NativeWindow SdlWindow::nativeWindow() const {
                 SDL_GetPointerProperty(properties, SDL_PROP_WINDOW_COCOA_WINDOW_POINTER, nullptr),
             .display = nullptr};
 #else
-    if (std::string_view{SDL_GetCurrentVideoDriver()} == "wayland") {
+    const std::string_view driver{SDL_GetCurrentVideoDriver()};
+    if (driver == "wayland") {
         return {.kind = NativeWindow::Kind::Wayland,
                 .window = SDL_GetPointerProperty(properties,
                                                  SDL_PROP_WINDOW_WAYLAND_SURFACE_POINTER, nullptr),
                 .display = SDL_GetPointerProperty(
                     properties, SDL_PROP_WINDOW_WAYLAND_DISPLAY_POINTER, nullptr)};
+    }
+    if (driver != "x11") {
+        return {}; // an unexpected video driver: no handle a renderer could use
     }
     // An X11 window is a number, which the renderer expects in a pointer-sized handle.
     const auto x11Window = static_cast<std::uintptr_t>(

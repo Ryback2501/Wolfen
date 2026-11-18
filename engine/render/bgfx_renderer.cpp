@@ -40,11 +40,16 @@ std::uint32_t packed(Colour colour) {
 } // namespace
 
 BgfxRenderer::BgfxRenderer(const platform::Window& window) {
+    const platform::NativeWindow native = window.nativeWindow();
+    if (native.window == nullptr) {
+        // bgfx would quietly start with no window at all, so stop before touching it.
+        throw StartupError{"the window has no native window handle for the renderer"};
+    }
+
     // Calling renderFrame() before init() makes bgfx render on this thread, with no render
     // thread of its own (needed on macOS, where drawing must happen on the main thread).
     bgfx::renderFrame();
 
-    const platform::NativeWindow native = window.nativeWindow();
     const Size size = window.pixelSize();
     bgfx::Init init;
     init.type = bgfx::RendererType::Count; // the best backend for this computer

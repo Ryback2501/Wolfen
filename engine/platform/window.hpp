@@ -26,7 +26,8 @@ enum class WindowEvent : std::uint8_t {
     Shown,   // visible again after Hidden
 };
 
-// The operating system's handles for a window, which a renderer needs to draw into it.
+// The operating system's handles for a window, which a renderer needs to draw into it. A null
+// window handle means the window has none a renderer could use.
 struct NativeWindow {
     enum class Kind : std::uint8_t { Windows, Cocoa, X11, Wayland };
 
