@@ -23,3 +23,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(Warnings)
 include(Dependencies)
+
+add_subdirectory(engine)
+add_subdirectory(game)
