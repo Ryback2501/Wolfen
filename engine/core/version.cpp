@@ -2,6 +2,8 @@
 
 namespace wolfen {
 
-std::string_view version() { return {}; }
+std::string_view version() {
+    return {};
+}
 
 } // namespace wolfen

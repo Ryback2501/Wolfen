@@ -3,6 +3,8 @@
 #   make build  build everything and stage the game into dist/
 #   make test   build and run the unit tests
 #   make run    build, then start the game from dist/ (pass options with ARGS="...")
+#   make lint   check formatting (clang-format) and code (clang-tidy) of our own code
+#   make fmt    format our own code in place
 
 SHELL := bash
 BUILD_DIR := build
@@ -22,7 +24,10 @@ CMAKE_CONFIGURE := cmake -S . -B $(BUILD_DIR) $(GENERATOR) \
   -DCMAKE_BUILD_TYPE=$(CONFIG) -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 CMAKE_BUILD := cmake --build $(BUILD_DIR) --config $(CONFIG) --parallel
 
-.PHONY: deps build test run
+# Our own C++ files only, never third-party code.
+SOURCES := $(shell find engine game tests \( -name '*.cpp' -o -name '*.hpp' \) 2>/dev/null)
+
+.PHONY: deps build test run lint fmt
 
 deps:
 	$(CMAKE_CONFIGURE)
@@ -42,3 +47,10 @@ test: $(BUILD_DIR)/CMakeCache.txt
 
 run: build
 	./$(DIST_DIR)/wolfen$(EXE) $(ARGS)
+
+lint: $(BUILD_DIR)/CMakeCache.txt
+	clang-format --dry-run --Werror $(SOURCES)
+	clang-tidy -p $(BUILD_DIR) --quiet $(filter %.cpp,$(SOURCES))
+
+fmt:
+	clang-format -i $(SOURCES)

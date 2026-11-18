@@ -1,0 +1,23 @@
+---
+# Kept to options clang-tidy 18 understands (the version on the CI lint runner).
+Checks: >
+  -*,
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  clang-analyzer-*,
+  cppcoreguidelines-*,
+  -cppcoreguidelines-avoid-magic-numbers,
+  misc-*,
+  -misc-include-cleaner,
+  -misc-non-private-member-variables-in-classes,
+  modernize-*,
+  -modernize-use-trailing-return-type,
+  performance-*,
+  portability-*,
+  readability-*,
+  -readability-magic-numbers,
+  -readability-identifier-length
+WarningsAsErrors: '*'
+HeaderFilterRegex: '/(engine|game|tests)/'
+FormatStyle: file
+...
