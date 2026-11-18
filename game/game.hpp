@@ -4,6 +4,8 @@
 #include "app/graphics_system.hpp"
 
 #include <iosfwd>
+#include <span>
+#include <string_view>
 
 namespace wolfen::game {
 
@@ -13,7 +15,10 @@ class Game {
   public:
     Game(std::ostream& out, std::ostream& err, engine::app::GraphicsSystem& graphics);
 
-    // Runs the game until it ends; returns the program's exit code.
+    // Runs the game with the given start options (without the program's name) until it ends;
+    // returns the program's exit code.
+    int run(std::span<const std::string_view> args);
+    // Runs the game with no start options.
     int run();
 
   private:

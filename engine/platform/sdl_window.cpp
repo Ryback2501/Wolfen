@@ -51,8 +51,9 @@ void addWindowEvent(const SDL_Event& event, std::vector<WindowEvent>& events) {
 
 SdlWindow::SdlWindow(const WindowSettings& settings) {
 #ifdef __linux__
-    // X11 first (it also runs on Wayland desktops through XWayland), Wayland as the fallback.
-    SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "x11,wayland");
+    // Wayland first, X11 as the fallback. On a Wayland desktop the X11 route (through XWayland)
+    // crashes bgfx's OpenGL renderer: EGL has to guess the display type and guesses Wayland.
+    SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "wayland,x11");
 #endif
     if (!SDL_Init(SDL_INIT_VIDEO)) {
         throw StartupError{sdlError("could not start the video system")};

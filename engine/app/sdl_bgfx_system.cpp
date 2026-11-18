@@ -10,8 +10,13 @@ SdlBgfxSystem::openWindow(const platform::WindowSettings& settings) {
     return std::make_unique<platform::SdlWindow>(settings);
 }
 
-std::unique_ptr<render::Renderer> SdlBgfxSystem::startRenderer(platform::Window& window) {
-    return std::make_unique<render::BgfxRenderer>(window);
+std::vector<render::Backend> SdlBgfxSystem::availableRenderers() const {
+    return render::BgfxRenderer::supportedBackends();
+}
+
+std::unique_ptr<render::Renderer>
+SdlBgfxSystem::startRenderer(platform::Window& window, std::optional<render::Backend> only) {
+    return std::make_unique<render::BgfxRenderer>(window, only);
 }
 
 } // namespace wolfen::engine::app

@@ -5,6 +5,9 @@
 
 #include <bgfx/bgfx.h>
 
+#include <algorithm>
+#include <array>
+#include <cstddef>
 #include <cstdint>
 
 namespace wolfen::engine::render {
@@ -31,6 +34,24 @@ Backend backendOf(bgfx::RendererType::Enum type) {
     }
 }
 
+bgfx::RendererType::Enum bgfxTypeOf(Backend backend) {
+    switch (backend) {
+    case Backend::Vulkan:
+        return bgfx::RendererType::Vulkan;
+    case Backend::OpenGL:
+        return bgfx::RendererType::OpenGL;
+    case Backend::Metal:
+        return bgfx::RendererType::Metal;
+    case Backend::Direct3D11:
+        return bgfx::RendererType::Direct3D11;
+    case Backend::Direct3D12:
+        return bgfx::RendererType::Direct3D12;
+    case Backend::Other:
+        break;
+    }
+    return bgfx::RendererType::Count; // let bgfx choose
+}
+
 // bgfx's 0xRRGGBBAA form of a colour.
 std::uint32_t packed(Colour colour) {
     return (std::uint32_t{colour.red} << 24U) | (std::uint32_t{colour.green} << 16U) |
@@ -39,7 +60,28 @@ std::uint32_t packed(Colour colour) {
 
 } // namespace
 
-BgfxRenderer::BgfxRenderer(const platform::Window& window) {
+std::vector<Backend> BgfxRenderer::supportedBackends() {
+    std::array<bgfx::RendererType::Enum, bgfx::RendererType::Count> types{};
+    const std::uint8_t count =
+        bgfx::getSupportedRenderers(static_cast<std::uint8_t>(types.size()), types.data());
+    std::vector<Backend> backends;
+    for (std::size_t i = 0; i < count; ++i) {
+        const Backend backend = backendOf(types.at(i));
+#ifndef _WIN32
+        // bgfx also builds Direct3D outside Windows (for layers such as DXVK) and reports it as
+        // supported, although it cannot start on a normal Linux desktop.
+        if (backend == Backend::Direct3D11 || backend == Backend::Direct3D12) {
+            continue;
+        }
+#endif
+        if (backend != Backend::Other && std::ranges::find(backends, backend) == backends.end()) {
+            backends.push_back(backend);
+        }
+    }
+    return backends;
+}
+
+BgfxRenderer::BgfxRenderer(const platform::Window& window, std::optional<Backend> only) {
     const platform::NativeWindow native = window.nativeWindow();
     if (native.window == nullptr) {
         // bgfx would quietly start with no window at all, so stop before touching it.
@@ -52,8 +94,10 @@ BgfxRenderer::BgfxRenderer(const platform::Window& window) {
 
     const Size size = window.pixelSize();
     bgfx::Init init;
-    init.type = bgfx::RendererType::Count; // the best backend for this computer
-    init.fallback = true;
+    // The chosen backend and nothing else, or the best one for this computer with fallback.
+    const bool chosen = only.has_value() && *only != Backend::Other;
+    init.type = chosen ? bgfxTypeOf(*only) : bgfx::RendererType::Count;
+    init.fallback = !chosen;
     init.platformData.type = native.kind == platform::NativeWindow::Kind::Wayland
                                  ? bgfx::NativeWindowHandleType::Wayland
                                  : bgfx::NativeWindowHandleType::Default;
