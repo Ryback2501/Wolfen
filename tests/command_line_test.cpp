@@ -65,11 +65,14 @@ std::string usage(std::string_view available) {
 
 const std::string usageHere = usage("vulkan, opengl"); // the fake's default available renderers
 
-// An option error: the message on stderr, then the usage; nothing on stdout, no window, exit 1.
+// The one line shown after an option error, instead of the usage.
+const std::string hintLine = "Run 'wolfen --help' to see the available options.\n";
+
+// An option error: the message on stderr, then the hint line; nothing on stdout, no window, exit 1.
 void requireOptionError(FakeGraphicsSystem& graphics, std::initializer_list<std::string_view> args,
                         const std::string& message) {
     const GameRun run{graphics, args};
-    REQUIRE(run.err() == message + "\n" + usageHere);
+    REQUIRE(run.err() == message + "\n" + hintLine);
     REQUIRE(run.out().empty());
     REQUIRE(graphics.record.steps.empty());
     REQUIRE(run.exitCode() == 1);
