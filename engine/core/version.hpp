@@ -1,4 +1,5 @@
-#pragma once
+#ifndef WOLFEN_ENGINE_CORE_VERSION_HPP
+#define WOLFEN_ENGINE_CORE_VERSION_HPP
 
 #include <string_view>
 
@@ -19,3 +20,5 @@ class Version {
 };
 
 } // namespace wolfen::engine
+
+#endif // WOLFEN_ENGINE_CORE_VERSION_HPP

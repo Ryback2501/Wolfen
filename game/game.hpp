@@ -1,4 +1,5 @@
-#pragma once
+#ifndef WOLFEN_GAME_GAME_HPP
+#define WOLFEN_GAME_GAME_HPP
 
 #include <iosfwd>
 
@@ -17,3 +18,5 @@ class Game {
 };
 
 } // namespace wolfen::game
+
+#endif // WOLFEN_GAME_GAME_HPP
