@@ -49,6 +49,9 @@ void Game::play(engine::platform::Window& window, engine::render::Renderer& rend
             case engine::platform::WindowEvent::Resized:
                 renderer.resize(window.pixelSize());
                 break;
+            case engine::platform::WindowEvent::Hidden:
+            case engine::platform::WindowEvent::Shown:
+                break;
             }
         }
         if (running) {

@@ -16,6 +16,37 @@ std::string sdlError(std::string_view whatFailed) {
     return std::string{whatFailed} + ": " + SDL_GetError();
 }
 
+// Adds the WindowEvent an SDL event stands for, if any.
+void addWindowEvent(const SDL_Event& event, std::vector<WindowEvent>& events) {
+    switch (event.type) {
+    case SDL_EVENT_QUIT:
+    case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
+        events.push_back(WindowEvent::CloseRequested);
+        break;
+    case SDL_EVENT_KEY_DOWN:
+        if (event.key.key == SDLK_ESCAPE && !event.key.repeat) {
+            events.push_back(WindowEvent::EscapePressed);
+        }
+        break;
+    case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
+        events.push_back(WindowEvent::Resized);
+        break;
+    case SDL_EVENT_WINDOW_MINIMIZED:
+    case SDL_EVENT_WINDOW_OCCLUDED:
+    case SDL_EVENT_WINDOW_HIDDEN:
+        events.push_back(WindowEvent::Hidden);
+        break;
+    case SDL_EVENT_WINDOW_RESTORED:
+    case SDL_EVENT_WINDOW_MAXIMIZED:
+    case SDL_EVENT_WINDOW_EXPOSED:
+    case SDL_EVENT_WINDOW_SHOWN:
+        events.push_back(WindowEvent::Shown);
+        break;
+    default:
+        break;
+    }
+}
+
 } // namespace
 
 SdlWindow::SdlWindow(const WindowSettings& settings) {
@@ -57,22 +88,19 @@ std::vector<WindowEvent> SdlWindow::pollEvents() {
     std::vector<WindowEvent> events;
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
-        switch (event.type) {
-        case SDL_EVENT_QUIT:
-        case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
-            events.push_back(WindowEvent::CloseRequested);
-            break;
-        case SDL_EVENT_KEY_DOWN:
-            if (event.key.key == SDLK_ESCAPE && !event.key.repeat) {
-                events.push_back(WindowEvent::EscapePressed);
-            }
-            break;
-        case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
-            events.push_back(WindowEvent::Resized);
-            break;
-        default:
-            break;
-        }
+        addWindowEvent(event, events);
+    }
+    return events;
+}
+
+std::vector<WindowEvent> SdlWindow::waitEvents() {
+    std::vector<WindowEvent> events;
+    SDL_Event event;
+    if (SDL_WaitEvent(&event)) {
+        addWindowEvent(event, events);
+    }
+    while (SDL_PollEvent(&event)) {
+        addWindowEvent(event, events);
     }
     return events;
 }

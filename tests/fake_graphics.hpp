@@ -23,6 +23,7 @@ struct GraphicsRecord {
     std::vector<std::string> titles;
     std::vector<engine::Colour> frames;
     std::vector<engine::Size> resizes;
+    int waits{};                        // how many times the game slept until the window had events
     std::string outputWhenWindowOpened; // what the game had printed when it opened the window
 };
 
@@ -55,6 +56,10 @@ class FakeWindow final : public engine::platform::Window {
             }
         }
         return batch;
+    }
+    std::vector<engine::platform::WindowEvent> waitEvents() override {
+        ++record_->waits;
+        return pollEvents();
     }
     [[nodiscard]] engine::Size pixelSize() const override {
         return pixelSize_;

@@ -22,6 +22,8 @@ enum class WindowEvent : std::uint8_t {
     CloseRequested, // the window's close button
     EscapePressed,
     Resized, // the size in pixels changed; read it with Window::pixelSize()
+    Hidden,  // minimized or fully covered: nothing drawn would be seen
+    Shown,   // visible again after Hidden
 };
 
 // The operating system's handles for a window, which a renderer needs to draw into it.
@@ -45,6 +47,8 @@ class Window {
 
     // Everything that happened since the last call, oldest first.
     virtual std::vector<WindowEvent> pollEvents() = 0;
+    // Like pollEvents(), but first sleeps until something happens (for a hidden window).
+    virtual std::vector<WindowEvent> waitEvents() = 0;
     [[nodiscard]] virtual Size pixelSize() const = 0;
     virtual void setTitle(std::string_view title) = 0;
     [[nodiscard]] virtual NativeWindow nativeWindow() const = 0;

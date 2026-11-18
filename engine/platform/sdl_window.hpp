@@ -20,6 +20,7 @@ class SdlWindow final : public Window {
     ~SdlWindow() override;
 
     std::vector<WindowEvent> pollEvents() override;
+    std::vector<WindowEvent> waitEvents() override;
     [[nodiscard]] Size pixelSize() const override;
     void setTitle(std::string_view title) override;
     [[nodiscard]] NativeWindow nativeWindow() const override;
