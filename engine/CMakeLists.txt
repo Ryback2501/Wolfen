@@ -4,7 +4,8 @@ configure_file(core/version_text.hpp.in "${PROJECT_BINARY_DIR}/generated/engine/
 
 add_library(engine STATIC
     core/version.cpp
-    render/renderer_name.cpp)
+    render/renderer_name.cpp
+    app/sdl_bgfx_system.cpp)
 # Each library is included from its own folder ("core/version.hpp"), never from the repo root:
 # the root holds the VERSION file, which a case-insensitive file system (macOS, Windows) would
 # pick up for the standard header <version>.

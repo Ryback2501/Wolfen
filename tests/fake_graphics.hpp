@@ -1,0 +1,130 @@
+#ifndef WOLFEN_TESTS_FAKE_GRAPHICS_HPP
+#define WOLFEN_TESTS_FAKE_GRAPHICS_HPP
+
+#include "app/graphics_system.hpp"
+#include "core/colour.hpp"
+#include "core/size.hpp"
+#include "core/startup_error.hpp"
+
+#include <deque>
+#include <memory>
+#include <optional>
+#include <string>
+#include <utility>
+#include <vector>
+
+namespace wolfen::tests {
+
+// What happened to the fake window and renderer, for the tests to check. It outlives them.
+struct GraphicsRecord {
+    std::vector<std::string> steps; // "open window", "start renderer", "close renderer", ...
+    std::optional<engine::platform::WindowSettings> windowSettings;
+    std::vector<std::string> titles;
+    std::vector<engine::Colour> frames;
+    std::vector<engine::Size> resizes;
+};
+
+// A window with no screen: it hands out the events it was given, one batch per poll, and asks to
+// close once they run out so a test can never loop forever.
+class FakeWindow final : public engine::platform::Window {
+  public:
+    FakeWindow(GraphicsRecord& record,
+               std::deque<std::vector<engine::platform::WindowEvent>> events,
+               engine::Size pixelSize)
+        : record_{&record}, events_{std::move(events)}, pixelSize_{pixelSize} {}
+    FakeWindow(const FakeWindow&) = delete;
+    FakeWindow& operator=(const FakeWindow&) = delete;
+    FakeWindow(FakeWindow&&) = delete;
+    FakeWindow& operator=(FakeWindow&&) = delete;
+    ~FakeWindow() override {
+        record_->steps.emplace_back("close window");
+    }
+
+    std::vector<engine::platform::WindowEvent> pollEvents() override {
+        if (events_.empty()) {
+            return {engine::platform::WindowEvent::CloseRequested};
+        }
+        auto batch = std::move(events_.front());
+        events_.pop_front();
+        return batch;
+    }
+    [[nodiscard]] engine::Size pixelSize() const override {
+        return pixelSize_;
+    }
+    void setTitle(std::string_view title) override {
+        record_->titles.emplace_back(title);
+    }
+    [[nodiscard]] engine::platform::NativeWindow nativeWindow() const override {
+        return {};
+    }
+    void setPixelSize(engine::Size size) {
+        pixelSize_ = size;
+    }
+
+  private:
+    GraphicsRecord* record_;
+    std::deque<std::vector<engine::platform::WindowEvent>> events_;
+    engine::Size pixelSize_;
+};
+
+// A renderer that draws nothing and records every frame.
+class FakeRenderer final : public engine::render::Renderer {
+  public:
+    FakeRenderer(GraphicsRecord& record, std::string name)
+        : record_{&record}, name_{std::move(name)} {}
+    FakeRenderer(const FakeRenderer&) = delete;
+    FakeRenderer& operator=(const FakeRenderer&) = delete;
+    FakeRenderer(FakeRenderer&&) = delete;
+    FakeRenderer& operator=(FakeRenderer&&) = delete;
+    ~FakeRenderer() override {
+        record_->steps.emplace_back("close renderer");
+    }
+
+    [[nodiscard]] std::string_view name() const override {
+        return name_;
+    }
+    void resize(engine::Size pixelSize) override {
+        record_->resizes.push_back(pixelSize);
+    }
+    void drawFrame(engine::Colour background) override {
+        record_->frames.push_back(background);
+    }
+
+  private:
+    GraphicsRecord* record_;
+    std::string name_;
+};
+
+// A graphics system with no screen. Each test sets what it should do, then runs the game with it.
+class FakeGraphicsSystem final : public engine::app::GraphicsSystem {
+  public:
+    GraphicsRecord record;
+    std::deque<std::vector<engine::platform::WindowEvent>> events; // one batch per poll
+    engine::Size pixelSize{.width = 1280, .height = 720};
+    std::string rendererName{"Fake"};
+    std::optional<std::string> windowFailure;   // when set, openWindow() fails with it
+    std::optional<std::string> rendererFailure; // when set, startRenderer() fails with it
+
+    std::unique_ptr<engine::platform::Window>
+    openWindow(const engine::platform::WindowSettings& settings) override {
+        record.steps.emplace_back("open window");
+        record.windowSettings = settings;
+        if (windowFailure) {
+            throw engine::StartupError{*windowFailure};
+        }
+        return std::make_unique<FakeWindow>(record, std::move(events), pixelSize);
+    }
+
+    std::unique_ptr<engine::render::Renderer>
+    startRenderer(engine::platform::Window& /*window*/) override {
+        record.steps.emplace_back("start renderer");
+        if (rendererFailure) {
+            throw engine::StartupError{*rendererFailure};
+        }
+        return std::make_unique<FakeRenderer>(record, rendererName);
+    }
+};
+
+} // namespace wolfen::tests
+
+#endif // WOLFEN_TESTS_FAKE_GRAPHICS_HPP
