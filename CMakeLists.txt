@@ -26,3 +26,6 @@ include(Dependencies)
 
 add_subdirectory(engine)
 add_subdirectory(game)
+
+enable_testing()
+add_subdirectory(tests)
