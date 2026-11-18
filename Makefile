@@ -24,8 +24,9 @@ CMAKE_CONFIGURE := cmake -S . -B $(BUILD_DIR) $(GENERATOR) \
   -DCMAKE_BUILD_TYPE=$(CONFIG) -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 CMAKE_BUILD := cmake --build $(BUILD_DIR) --config $(CONFIG) --parallel
 
-# Our own C++ files only, never third-party code.
-SOURCES := $(shell find engine game tests \( -name '*.cpp' -o -name '*.hpp' \) 2>/dev/null)
+# Our own C++ files only, never third-party code. Recursive `=` so the search runs only for the
+# targets that use it (lint, fmt), not for every target.
+SOURCES = $(shell find engine game tests \( -name '*.cpp' -o -name '*.hpp' \) 2>/dev/null)
 
 .PHONY: deps build test run lint fmt
 
