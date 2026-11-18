@@ -152,3 +152,25 @@ TEST_CASE("Renderer display names", "[renderer]") {
 TEST_CASE("Any other renderer shows the rendering library's own name", "[renderer]") {
     REQUIRE(RendererName::display(Backend::Other, "Noop") == "Noop");
 }
+
+TEST_CASE("A hidden window is not drawn; the game sleeps until it is shown again", "[game]") {
+    FakeGraphicsSystem graphics;
+    graphics.events = {{}, {WindowEvent::Hidden}, {}, {}, {WindowEvent::Shown}, {}, {}};
+    const GameRun run{graphics};
+    // Drawn after the 1st batch; not after Hidden (2nd) nor the batches waited for while hidden
+    // (3rd, 4th); again after Shown (5th), the 6th and the 7th. The 8th poll finds none left and
+    // closes.
+    REQUIRE(graphics.record.frames.size() == 4);
+    // The batches after Hidden (3rd, 4th, 5th) are waited for, not polled.
+    REQUIRE(graphics.record.waits == 3);
+    REQUIRE(run.exitCode() == 0);
+}
+
+TEST_CASE("A hidden window can still be closed", "[game]") {
+    FakeGraphicsSystem graphics;
+    graphics.events = {{WindowEvent::Hidden}, {WindowEvent::CloseRequested}};
+    const GameRun run{graphics};
+    REQUIRE(graphics.record.frames.empty());
+    REQUIRE(graphics.record.waits == 1);
+    REQUIRE(run.exitCode() == 0);
+}
