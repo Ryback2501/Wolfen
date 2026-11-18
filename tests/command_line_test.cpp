@@ -77,7 +77,8 @@ void requireOptionError(FakeGraphicsSystem& graphics, std::initializer_list<std:
 
 } // namespace
 
-TEST_CASE("--help prints the usage, opens no window and exits with 0", "[options][help]") {
+TEST_CASE("The --help option prints the usage, opens no window and exits with 0",
+          "[options][help]") {
     FakeGraphicsSystem graphics;
     const GameRun run{graphics, {"--help"}};
     REQUIRE(run.out() == usageHere); // the usage only: no start line
@@ -86,7 +87,7 @@ TEST_CASE("--help prints the usage, opens no window and exits with 0", "[options
     REQUIRE(run.exitCode() == 0);
 }
 
-TEST_CASE("--help wins over a wrong option and over --version", "[options][help]") {
+TEST_CASE("The --help option wins over a wrong option and over --version", "[options][help]") {
     for (const auto args : {std::initializer_list<std::string_view>{"--bogus", "--help"},
                             std::initializer_list<std::string_view>{"--version", "--help"},
                             std::initializer_list<std::string_view>{"--renderer", "--help"}}) {
@@ -113,7 +114,7 @@ TEST_CASE("The usage lists only the renderers available on this computer, in a f
     REQUIRE(GameRun{none, {"--help"}}.out() == usage("(none)"));
 }
 
-TEST_CASE("--version prints exactly the version line, opens no window and exits with 0",
+TEST_CASE("The --version option prints exactly the version line, opens no window and exits with 0",
           "[options][version]") {
     FakeGraphicsSystem graphics;
     const GameRun run{graphics, {"--version"}};
@@ -123,7 +124,7 @@ TEST_CASE("--version prints exactly the version line, opens no window and exits 
     REQUIRE(run.exitCode() == 0);
 }
 
-TEST_CASE("--version wins over wrong and repeated options", "[options][version]") {
+TEST_CASE("The --version option wins over wrong and repeated options", "[options][version]") {
     for (const auto args :
          {std::initializer_list<std::string_view>{"--version", "--bogus"},
           std::initializer_list<std::string_view>{"--renderer", "foo", "--version"},
@@ -138,7 +139,7 @@ TEST_CASE("--version wins over wrong and repeated options", "[options][version]"
     }
 }
 
-TEST_CASE("--renderer starts only the chosen renderer, after the start line",
+TEST_CASE("The --renderer option starts only the chosen renderer, after the start line",
           "[options][renderer]") {
     for (const auto& [name, backend] :
          {std::pair{"vulkan", Backend::Vulkan}, std::pair{"opengl", Backend::OpenGL}}) {
@@ -176,7 +177,7 @@ TEST_CASE("A renderer name Wolfen does not know", "[options][renderer]") {
     }
 }
 
-TEST_CASE("--renderer with no name", "[options][renderer]") {
+TEST_CASE("The --renderer option with no name", "[options][renderer]") {
     FakeGraphicsSystem alone;
     requireOptionError(alone, {"--renderer"}, "Option '--renderer' needs a renderer name");
     // A word starting with '-' is never a name: the first error is the missing name.
@@ -185,7 +186,7 @@ TEST_CASE("--renderer with no name", "[options][renderer]") {
                        "Option '--renderer' needs a renderer name");
 }
 
-TEST_CASE("--renderer given twice", "[options][renderer]") {
+TEST_CASE("The --renderer option given twice", "[options][renderer]") {
     FakeGraphicsSystem graphics;
     requireOptionError(graphics, {"--renderer", "opengl", "--renderer", "vulkan"},
                        "Option '--renderer' given twice");
