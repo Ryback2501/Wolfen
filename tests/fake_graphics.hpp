@@ -9,6 +9,7 @@
 #include <deque>
 #include <memory>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -18,10 +19,11 @@ namespace wolfen::tests {
 // What happened to the fake window and renderer, for the tests to check. It outlives them.
 struct GraphicsRecord {
     std::vector<std::string> steps; // "open window", "start renderer", "close renderer", ...
-    std::optional<engine::platform::WindowSettings> windowSettings;
+    engine::platform::WindowSettings windowSettings; // as asked for by the last openWindow()
     std::vector<std::string> titles;
     std::vector<engine::Colour> frames;
     std::vector<engine::Size> resizes;
+    std::string outputWhenWindowOpened; // what the game had printed when it opened the window
 };
 
 // A window with no screen: it hands out the events it was given, one batch per poll, and asks to
@@ -104,11 +106,15 @@ class FakeGraphicsSystem final : public engine::app::GraphicsSystem {
     std::string rendererName{"Fake"};
     std::optional<std::string> windowFailure;   // when set, openWindow() fails with it
     std::optional<std::string> rendererFailure; // when set, startRenderer() fails with it
+    const std::ostringstream* watchedOutput{};  // when set, recorded when the window opens
 
     std::unique_ptr<engine::platform::Window>
     openWindow(const engine::platform::WindowSettings& settings) override {
         record.steps.emplace_back("open window");
         record.windowSettings = settings;
+        if (watchedOutput != nullptr) {
+            record.outputWhenWindowOpened = watchedOutput->str();
+        }
         if (windowFailure) {
             throw engine::StartupError{*windowFailure};
         }

@@ -1,0 +1,153 @@
+#include "core/colour.hpp"
+#include "core/version.hpp"
+#include "fake_graphics.hpp"
+#include "game.hpp"
+#include "render/renderer_name.hpp"
+
+#include <catch2/catch_test_macros.hpp>
+
+#include <sstream>
+#include <string>
+#include <vector>
+
+using wolfen::engine::Colour;
+using wolfen::engine::Size;
+using wolfen::engine::Version;
+using wolfen::engine::platform::WindowEvent;
+using wolfen::engine::render::Backend;
+using wolfen::engine::render::RendererName;
+using wolfen::game::Game;
+using wolfen::tests::FakeGraphicsSystem;
+
+namespace {
+
+// Runs the game once with the given fake graphics system.
+class GameRun {
+  public:
+    explicit GameRun(FakeGraphicsSystem& graphics) {
+        graphics.watchedOutput = &out_;
+        Game game{out_, err_, graphics};
+        exitCode_ = game.run();
+    }
+
+    [[nodiscard]] int exitCode() const {
+        return exitCode_;
+    }
+    [[nodiscard]] std::string out() const {
+        return out_.str();
+    }
+    [[nodiscard]] std::string err() const {
+        return err_.str();
+    }
+
+  private:
+    std::ostringstream out_;
+    std::ostringstream err_;
+    int exitCode_{-1};
+};
+
+std::string startLine() {
+    return "Wolfen " + std::string{Version::current().text()} + "\n";
+}
+
+} // namespace
+
+TEST_CASE("The start line is printed before the window opens", "[game]") {
+    FakeGraphicsSystem graphics;
+    const GameRun run{graphics};
+    REQUIRE(graphics.record.outputWhenWindowOpened == startLine());
+    REQUIRE(run.out() == startLine());
+}
+
+TEST_CASE("The window opens 1280x720, resizable, titled with the version", "[game]") {
+    FakeGraphicsSystem graphics;
+    const GameRun run{graphics};
+    REQUIRE_FALSE(graphics.record.steps.empty());
+    REQUIRE(graphics.record.steps.front() == "open window");
+    const auto& settings = graphics.record.windowSettings;
+    REQUIRE(settings.size == Size{.width = 1280, .height = 720});
+    REQUIRE(settings.resizable);
+    REQUIRE(settings.title == "Wolfen " + std::string{Version::current().text()});
+}
+
+TEST_CASE("The title shows the version and the renderer in use", "[game]") {
+    FakeGraphicsSystem graphics;
+    graphics.rendererName = "Vulkan";
+    const GameRun run{graphics};
+    REQUIRE_FALSE(graphics.record.titles.empty());
+    REQUIRE(graphics.record.titles.back() ==
+            "Wolfen " + std::string{Version::current().text()} + " (Vulkan)");
+}
+
+TEST_CASE("Every frame fills the window with cornflower blue", "[game]") {
+    FakeGraphicsSystem graphics;
+    graphics.events = {{}, {}, {}, {WindowEvent::CloseRequested}};
+    const GameRun run{graphics};
+    const Colour cornflowerBlue{.red = 0x64, .green = 0x95, .blue = 0xED, .alpha = 0xFF};
+    REQUIRE(graphics.record.frames == std::vector<Colour>(3, cornflowerBlue));
+}
+
+TEST_CASE("The close button ends the game with exit code 0", "[game]") {
+    FakeGraphicsSystem graphics;
+    graphics.events = {{}, {WindowEvent::CloseRequested}, {}};
+    const GameRun run{graphics};
+    REQUIRE(run.exitCode() == 0);
+    REQUIRE(graphics.record.frames.size() == 1);
+    REQUIRE(run.err().empty());
+}
+
+TEST_CASE("Esc ends the game with exit code 0", "[game]") {
+    FakeGraphicsSystem graphics;
+    graphics.events = {{}, {WindowEvent::EscapePressed}, {}};
+    const GameRun run{graphics};
+    REQUIRE(run.exitCode() == 0);
+    REQUIRE(graphics.record.frames.size() == 1);
+}
+
+TEST_CASE("Resizing the window gives the renderer the new size in pixels", "[game]") {
+    FakeGraphicsSystem graphics;
+    graphics.pixelSize = Size{.width = 1600, .height = 900};
+    graphics.events = {{WindowEvent::Resized}, {}};
+    const GameRun run{graphics};
+    REQUIRE(graphics.record.resizes == std::vector<Size>{Size{.width = 1600, .height = 900}});
+}
+
+TEST_CASE("When the game ends, the renderer closes before the window", "[game]") {
+    FakeGraphicsSystem graphics;
+    const GameRun run{graphics};
+    REQUIRE(graphics.record.steps == std::vector<std::string>{"open window", "start renderer",
+                                                              "close renderer", "close window"});
+}
+
+TEST_CASE("A window that cannot open: message on stderr, non-zero exit code", "[game][startup]") {
+    FakeGraphicsSystem graphics;
+    graphics.windowFailure = "no display available";
+    const GameRun run{graphics};
+    REQUIRE(run.exitCode() != 0);
+    REQUIRE(run.err() == "Wolfen could not start: no display available\n");
+    REQUIRE(graphics.record.steps == std::vector<std::string>{"open window"});
+}
+
+TEST_CASE("A renderer that cannot start: message on stderr, non-zero exit code, window closed",
+          "[game][startup]") {
+    FakeGraphicsSystem graphics;
+    graphics.rendererFailure = "no renderer could start";
+    const GameRun run{graphics};
+    REQUIRE(run.exitCode() != 0);
+    REQUIRE(run.err() == "Wolfen could not start: no renderer could start\n");
+    REQUIRE(graphics.record.steps ==
+            std::vector<std::string>{"open window", "start renderer", "close window"});
+    REQUIRE(graphics.record.frames.empty());
+}
+
+TEST_CASE("Renderer display names", "[renderer]") {
+    REQUIRE(RendererName::display(Backend::Vulkan, "Vulkan") == "Vulkan");
+    REQUIRE(RendererName::display(Backend::OpenGL, "OpenGL 2.1") == "OpenGL");
+    REQUIRE(RendererName::display(Backend::Metal, "Metal") == "Metal");
+    REQUIRE(RendererName::display(Backend::Direct3D11, "Direct3D 11") == "Direct3D 11");
+    REQUIRE(RendererName::display(Backend::Direct3D12, "Direct3D 12") == "Direct3D 12");
+}
+
+TEST_CASE("Any other renderer shows the rendering library's own name", "[renderer]") {
+    REQUIRE(RendererName::display(Backend::Other, "Noop") == "Noop");
+}
