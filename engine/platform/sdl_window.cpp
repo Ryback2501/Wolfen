@@ -50,7 +50,7 @@ void addWindowEvent(const SDL_Event& event, std::vector<WindowEvent>& events) {
 } // namespace
 
 SdlWindow::SdlWindow(const WindowSettings& settings) {
-#if defined(__linux__)
+#ifdef __linux__
     // X11 first (it also runs on Wayland desktops through XWayland), Wayland as the fallback.
     SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "x11,wayland");
 #endif
@@ -117,7 +117,7 @@ void SdlWindow::setTitle(std::string_view title) {
 
 NativeWindow SdlWindow::nativeWindow() const {
     const SDL_PropertiesID properties = SDL_GetWindowProperties(window_);
-#if defined(_WIN32)
+#ifdef _WIN32
     return {.kind = NativeWindow::Kind::Windows,
             .window =
                 SDL_GetPointerProperty(properties, SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr),
