@@ -1,5 +1,5 @@
 #include "app/sdl_bgfx_system.hpp"
-#include "game.hpp"
+#include "launcher.hpp"
 
 #include <cstddef>
 #include <iostream>
@@ -14,6 +14,6 @@ int main(int argc, char* argv[]) {
                                              words.end());
 
     wolfen::engine::app::SdlBgfxSystem graphics;
-    wolfen::game::Game game{std::cout, std::cerr, graphics};
-    return game.run(args);
+    wolfen::game::Launcher launcher{std::cout, std::cerr, graphics};
+    return launcher.run(args);
 }

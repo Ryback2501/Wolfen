@@ -6,6 +6,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <optional>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -28,6 +29,12 @@ class GameRun {
         graphics.watchedOutput = &out_;
         Game game{out_, err_, graphics};
         exitCode_ = game.run();
+    }
+    // Runs it with the given renderer choice, already checked by the launcher.
+    GameRun(FakeGraphicsSystem& graphics, std::optional<Backend> renderer) {
+        graphics.watchedOutput = &out_;
+        Game game{out_, err_, graphics};
+        exitCode_ = game.run(renderer);
     }
 
     [[nodiscard]] int exitCode() const {
@@ -173,4 +180,35 @@ TEST_CASE("A hidden window can still be closed", "[game]") {
     REQUIRE(graphics.record.frames.empty());
     REQUIRE(graphics.record.waits == 1);
     REQUIRE(run.exitCode() == 0);
+}
+
+TEST_CASE("The game starts the renderer it is given, after the start line", "[game][renderer]") {
+    for (const auto backend : {Backend::Vulkan, Backend::OpenGL}) {
+        FakeGraphicsSystem graphics;
+        const GameRun run{graphics, backend};
+        REQUIRE(graphics.record.outputWhenWindowOpened == startLine());
+        REQUIRE(graphics.record.requestedRenderer == backend);
+        REQUIRE(run.exitCode() == 0);
+    }
+}
+
+TEST_CASE("Given no renderer, the game lets the engine choose", "[game][renderer]") {
+    FakeGraphicsSystem graphics;
+    const GameRun run{graphics, std::nullopt};
+    REQUIRE(graphics.record.steps.size() >= 2);
+    REQUIRE(graphics.record.steps.at(1) == "start renderer");
+    REQUIRE_FALSE(graphics.record.requestedRenderer.has_value());
+    REQUIRE(run.exitCode() == 0);
+}
+
+TEST_CASE("A given renderer that fails to start: its own message, exit 1, window closed",
+          "[game][renderer][startup]") {
+    FakeGraphicsSystem graphics;
+    graphics.rendererFailure = "the device could not be created";
+    const GameRun run{graphics, Backend::Vulkan};
+    REQUIRE(run.out() == startLine()); // the start line comes before the failure
+    REQUIRE(run.err() == "Renderer 'vulkan' could not be started on this computer.\n");
+    REQUIRE(graphics.record.steps ==
+            std::vector<std::string>{"open window", "start renderer", "close window"});
+    REQUIRE(run.exitCode() == 1);
 }

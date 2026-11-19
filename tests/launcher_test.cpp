@@ -1,6 +1,6 @@
 #include "core/version.hpp"
 #include "fake_graphics.hpp"
-#include "game.hpp"
+#include "launcher.hpp"
 #include "render/renderer_name.hpp"
 
 #include <catch2/catch_test_macros.hpp>
@@ -14,18 +14,18 @@
 
 using wolfen::engine::Version;
 using wolfen::engine::render::Backend;
-using wolfen::game::Game;
+using wolfen::game::Launcher;
 using wolfen::tests::FakeGraphicsSystem;
 
 namespace {
 
-// Runs the game once with the given start options and fake graphics system.
-class GameRun {
+// Runs the launcher once with the given start options and fake graphics system.
+class LauncherRun {
   public:
-    GameRun(FakeGraphicsSystem& graphics, std::initializer_list<std::string_view> args)
+    LauncherRun(FakeGraphicsSystem& graphics, std::initializer_list<std::string_view> args)
         : args_{args} {
-        Game game{out_, err_, graphics};
-        exitCode_ = game.run(args_);
+        Launcher launcher{out_, err_, graphics};
+        exitCode_ = launcher.run(args_);
     }
 
     [[nodiscard]] int exitCode() const {
@@ -71,7 +71,7 @@ const std::string hintLine = "Run 'wolfen --help' to see the available options.\
 // An option error: the message on stderr, then the hint line; nothing on stdout, no window, exit 1.
 void requireOptionError(FakeGraphicsSystem& graphics, std::initializer_list<std::string_view> args,
                         const std::string& message) {
-    const GameRun run{graphics, args};
+    const LauncherRun run{graphics, args};
     REQUIRE(run.err() == message + "\n" + hintLine);
     REQUIRE(run.out().empty());
     REQUIRE(graphics.record.steps.empty());
@@ -83,7 +83,7 @@ void requireOptionError(FakeGraphicsSystem& graphics, std::initializer_list<std:
 TEST_CASE("The --help option prints the usage, opens no window and exits with 0",
           "[options][help]") {
     FakeGraphicsSystem graphics;
-    const GameRun run{graphics, {"--help"}};
+    const LauncherRun run{graphics, {"--help"}};
     REQUIRE(run.out() == usageHere); // the usage only: no start line
     REQUIRE(run.err().empty());
     REQUIRE(graphics.record.steps.empty());
@@ -95,7 +95,7 @@ TEST_CASE("The --help option wins over a wrong option and over --version", "[opt
                             std::initializer_list<std::string_view>{"--version", "--help"},
                             std::initializer_list<std::string_view>{"--renderer", "--help"}}) {
         FakeGraphicsSystem graphics;
-        const GameRun run{graphics, args};
+        const LauncherRun run{graphics, args};
         REQUIRE(run.out() == usageHere);
         REQUIRE(run.err().empty());
         REQUIRE(run.exitCode() == 0);
@@ -106,21 +106,21 @@ TEST_CASE("The usage lists only the renderers available on this computer, in a f
           "[options][help]") {
     FakeGraphicsSystem graphics;
     graphics.available = {Backend::OpenGL, Backend::Vulkan, Backend::Direct3D12};
-    REQUIRE(GameRun{graphics, {"--help"}}.out() == usage("vulkan, opengl, d3d12"));
+    REQUIRE(LauncherRun{graphics, {"--help"}}.out() == usage("vulkan, opengl, d3d12"));
 
     FakeGraphicsSystem mac;
     mac.available = {Backend::Metal};
-    REQUIRE(GameRun{mac, {"--help"}}.out() == usage("metal"));
+    REQUIRE(LauncherRun{mac, {"--help"}}.out() == usage("metal"));
 
     FakeGraphicsSystem none;
     none.available = {};
-    REQUIRE(GameRun{none, {"--help"}}.out() == usage("(none)"));
+    REQUIRE(LauncherRun{none, {"--help"}}.out() == usage("(none)"));
 }
 
 TEST_CASE("The --version option prints exactly the version line, opens no window and exits with 0",
           "[options][version]") {
     FakeGraphicsSystem graphics;
-    const GameRun run{graphics, {"--version"}};
+    const LauncherRun run{graphics, {"--version"}};
     REQUIRE(run.out() == versionLine());
     REQUIRE(run.err().empty());
     REQUIRE(graphics.record.steps.empty());
@@ -134,7 +134,7 @@ TEST_CASE("The --version option wins over wrong and repeated options", "[options
           std::initializer_list<std::string_view>{"--version", "--version"},
           std::initializer_list<std::string_view>{"--renderer", "--version"}}) {
         FakeGraphicsSystem graphics;
-        const GameRun run{graphics, args};
+        const LauncherRun run{graphics, args};
         REQUIRE(run.out() == versionLine());
         REQUIRE(run.err().empty());
         REQUIRE(graphics.record.steps.empty());
@@ -147,7 +147,7 @@ TEST_CASE("The --renderer option starts only the chosen renderer, after the star
     for (const auto& [name, backend] :
          {std::pair{"vulkan", Backend::Vulkan}, std::pair{"opengl", Backend::OpenGL}}) {
         FakeGraphicsSystem graphics;
-        const GameRun run{graphics, {"--renderer", name}};
+        const LauncherRun run{graphics, {"--renderer", name}};
         REQUIRE(run.out() == versionLine());
         REQUIRE(graphics.record.requestedRenderer == backend);
         REQUIRE(graphics.record.steps.front() == "open window");
@@ -157,7 +157,7 @@ TEST_CASE("The --renderer option starts only the chosen renderer, after the star
 
 TEST_CASE("With no options the game lets the engine choose the renderer", "[options][renderer]") {
     FakeGraphicsSystem graphics;
-    const GameRun run{graphics, {}};
+    const LauncherRun run{graphics, {}};
     REQUIRE(graphics.record.steps.size() >= 2);
     REQUIRE(graphics.record.steps.at(1) == "start renderer");
     REQUIRE_FALSE(graphics.record.requestedRenderer.has_value());
@@ -212,7 +212,7 @@ TEST_CASE("A chosen renderer that fails to start: its own message, exit 1, windo
           "[options][renderer][startup]") {
     FakeGraphicsSystem graphics;
     graphics.rendererFailure = "the device could not be created";
-    const GameRun run{graphics, {"--renderer", "vulkan"}};
+    const LauncherRun run{graphics, {"--renderer", "vulkan"}};
     REQUIRE(run.out() == versionLine()); // the start line comes before the failure
     REQUIRE(run.err() == "Renderer 'vulkan' could not be started on this computer.\n");
     REQUIRE(graphics.record.steps ==
@@ -224,7 +224,7 @@ TEST_CASE("Other start failures keep the 'Wolfen could not start' prefix and exi
           "[options][startup]") {
     FakeGraphicsSystem graphics;
     graphics.windowFailure = "no display available";
-    const GameRun run{graphics, {}};
+    const LauncherRun run{graphics, {}};
     REQUIRE(run.err() == "Wolfen could not start: no display available\n");
     REQUIRE(run.exitCode() == 1);
 }
