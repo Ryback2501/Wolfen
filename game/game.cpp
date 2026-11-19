@@ -9,7 +9,6 @@
 #include <optional>
 #include <ostream>
 #include <string>
-#include <vector>
 
 namespace wolfen::game {
 
@@ -23,51 +22,34 @@ constexpr engine::Colour background{.red = 0x64, .green = 0x95, .blue = 0xED, .a
 Game::Game(std::ostream& out, std::ostream& err, engine::app::GraphicsSystem& graphics)
     : out_{&out}, err_{&err}, graphics_{&graphics} {}
 
+std::string Game::name() {
+    return "Wolfen " + std::string{engine::Version::current().text()};
+}
+
 int Game::run() {
-    return run(std::span<const std::string_view>{});
+    return run(std::nullopt);
 }
 
-int Game::run(std::optional<engine::render::Backend> /*renderer*/) {
-    return run();
-}
-
-int Game::run(std::span<const std::string_view> args) {
-    const std::string name = "Wolfen " + std::string{engine::Version::current().text()};
-    const std::vector<engine::render::Backend> available = graphics_->availableRenderers();
-    const CommandLine options{args, available};
-
-    switch (options.action()) {
-    case CommandLine::Action::Help:
-        *out_ << CommandLine::usage(available);
-        return 0;
-    case CommandLine::Action::Version:
-        *out_ << name << '\n';
-        return 0;
-    case CommandLine::Action::Error:
-        *err_ << options.error() << '\n' << CommandLine::hint() << '\n';
-        return 1;
-    case CommandLine::Action::Run:
-        break;
-    }
-
-    *out_ << name << '\n' << std::flush; // flushed, so it shows before the window opens
+int Game::run(std::optional<engine::render::Backend> renderer) {
+    const std::string title = name();
+    *out_ << title << '\n' << std::flush; // flushed, so it shows before the window opens
     try {
         // Declared in this order so the renderer is destroyed before the window it draws into.
         const auto window =
-            graphics_->openWindow({.title = name, .size = windowSize, .resizable = true});
-        std::unique_ptr<engine::render::Renderer> renderer;
+            graphics_->openWindow({.title = title, .size = windowSize, .resizable = true});
+        std::unique_ptr<engine::render::Renderer> started;
         try {
-            renderer = graphics_->startRenderer(*window, options.renderer());
+            started = graphics_->startRenderer(*window, renderer);
         } catch (const engine::StartupError&) {
-            if (!options.renderer()) {
+            if (!renderer) {
                 throw;
             }
-            *err_ << "Renderer '" << CommandLine::optionName(*options.renderer())
+            *err_ << "Renderer '" << CommandLine::optionName(*renderer)
                   << "' could not be started on this computer.\n";
             return 1;
         }
-        window->setTitle(name + " (" + std::string{renderer->name()} + ")");
-        play(*window, *renderer);
+        window->setTitle(title + " (" + std::string{started->name()} + ")");
+        play(*window, *started);
     } catch (const engine::StartupError& error) {
         *err_ << "Wolfen could not start: " << error.what() << '\n';
         return 1;
