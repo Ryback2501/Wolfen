@@ -4,6 +4,7 @@
 #include "app/graphics_system.hpp"
 
 #include <iosfwd>
+#include <optional>
 #include <span>
 #include <string_view>
 
@@ -20,6 +21,9 @@ class Game {
     int run(std::span<const std::string_view> args);
     // Runs the game with no start options.
     int run();
+    // Runs the game with the given renderer, or the best one for this computer when none is given,
+    // until it ends; returns the program's exit code.
+    int run(std::optional<engine::render::Backend> renderer);
 
   private:
     // The main loop: handles the window's events and draws a frame, until the game should end.

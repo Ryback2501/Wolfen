@@ -6,6 +6,7 @@
 #include "core/version.hpp"
 
 #include <memory>
+#include <optional>
 #include <ostream>
 #include <string>
 #include <vector>
@@ -23,7 +24,11 @@ Game::Game(std::ostream& out, std::ostream& err, engine::app::GraphicsSystem& gr
     : out_{&out}, err_{&err}, graphics_{&graphics} {}
 
 int Game::run() {
-    return run({});
+    return run(std::span<const std::string_view>{});
+}
+
+int Game::run(std::optional<engine::render::Backend> /*renderer*/) {
+    return run();
 }
 
 int Game::run(std::span<const std::string_view> args) {
