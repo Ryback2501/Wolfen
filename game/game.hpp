@@ -18,7 +18,7 @@ class Game {
     // How a run of the game ended.
     enum class Outcome : std::uint8_t {
         Ended,                // played until the player closed it
-        ChosenRendererFailed, // the renderer it was given could not start; nothing was printed
+        ChosenRendererFailed, // the renderer it was given could not start; nothing on stderr
         CouldNotStart,        // it could not start; "Wolfen could not start: ..." was printed
     };
 
