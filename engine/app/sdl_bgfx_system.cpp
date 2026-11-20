@@ -10,8 +10,8 @@ SdlBgfxSystem::openWindow(const platform::WindowSettings& settings) {
     return std::make_unique<platform::SdlWindow>(settings);
 }
 
-std::vector<render::Backend> SdlBgfxSystem::availableRenderers() const {
-    return render::BgfxRenderer::supportedBackends();
+std::vector<render::Backend> SdlBgfxSystem::availableBackends() const {
+    return render::BgfxRenderer::availableBackends();
 }
 
 std::unique_ptr<render::Renderer>

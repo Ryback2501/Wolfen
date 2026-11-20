@@ -27,7 +27,7 @@ class GraphicsSystem {
     openWindow(const platform::WindowSettings& settings) = 0;
     // The renderers this computer supports, among the ones Wolfen names (never Backend::Other).
     // Needs no window.
-    [[nodiscard]] virtual std::vector<render::Backend> availableRenderers() const = 0;
+    [[nodiscard]] virtual std::vector<render::Backend> availableBackends() const = 0;
     // Starts the given renderer and no other one, or the best one for this computer (falling back
     // to another if it fails) when none is given. Throws StartupError when it cannot start. The
     // renderer must be destroyed before the window it draws into.

@@ -152,7 +152,7 @@ TEST_CASE("The game starts the renderer it is given, after the start line", "[ga
         FakeGraphicsSystem graphics;
         const GameRun run{graphics, backend};
         REQUIRE(graphics.record.outputWhenWindowOpened == versionLine());
-        REQUIRE(graphics.record.requestedRenderer == backend);
+        REQUIRE(graphics.record.requestedBackend == backend);
         REQUIRE(run.outcome() == Game::Outcome::Ended);
     }
 }
@@ -162,7 +162,7 @@ TEST_CASE("Given no renderer, the game lets the engine choose", "[game][renderer
     const GameRun run{graphics, std::nullopt};
     REQUIRE(graphics.record.steps.size() >= 2);
     REQUIRE(graphics.record.steps.at(1) == "start renderer");
-    REQUIRE_FALSE(graphics.record.requestedRenderer.has_value());
+    REQUIRE_FALSE(graphics.record.requestedBackend.has_value());
     REQUIRE(run.outcome() == Game::Outcome::Ended);
 }
 

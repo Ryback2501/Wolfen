@@ -16,7 +16,7 @@ Launcher::Launcher(std::ostream& out, std::ostream& err, engine::app::GraphicsSy
     : out_{&out}, err_{&err}, graphics_{&graphics} {}
 
 int Launcher::run(std::span<const std::string_view> args) {
-    const std::vector<engine::render::Backend> available = graphics_->availableRenderers();
+    const std::vector<engine::render::Backend> available = graphics_->availableBackends();
     const CommandLine commandLine{args, available};
 
     switch (commandLine.action()) {
@@ -33,7 +33,7 @@ int Launcher::run(std::span<const std::string_view> args) {
         break;
     }
 
-    const std::optional<engine::render::Backend> backend = commandLine.renderer();
+    const std::optional<engine::render::Backend> backend = commandLine.backend();
     Game game{*out_, *err_, *graphics_};
     switch (game.run(backend)) {
     case Game::Outcome::Ended:

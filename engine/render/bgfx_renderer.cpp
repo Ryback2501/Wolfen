@@ -44,7 +44,7 @@ std::uint32_t packed(Colour colour) {
 
 } // namespace
 
-std::vector<Backend> BgfxRenderer::supportedBackends() {
+std::vector<Backend> BgfxRenderer::availableBackends() {
     std::array<bgfx::RendererType::Enum, bgfx::RendererType::Count> types{};
     const std::uint8_t count =
         bgfx::getSupportedRenderers(static_cast<std::uint8_t>(types.size()), types.data());

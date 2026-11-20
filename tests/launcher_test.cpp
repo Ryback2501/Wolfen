@@ -117,7 +117,7 @@ TEST_CASE("The --renderer option starts only the chosen renderer, after the star
         FakeGraphicsSystem graphics;
         const LauncherRun run{graphics, {"--renderer", name}};
         REQUIRE(run.out() == versionLine());
-        REQUIRE(graphics.record.requestedRenderer == backend);
+        REQUIRE(graphics.record.requestedBackend == backend);
         REQUIRE(graphics.record.steps.front() == "open window");
         REQUIRE(run.exitCode() == 0);
     }
@@ -126,7 +126,7 @@ TEST_CASE("The --renderer option starts only the chosen renderer, after the star
 TEST_CASE("With no options the game lets the engine choose the renderer", "[options][renderer]") {
     FakeGraphicsSystem graphics;
     const LauncherRun run{graphics, {}};
-    REQUIRE_FALSE(graphics.record.requestedRenderer.has_value());
+    REQUIRE_FALSE(graphics.record.requestedBackend.has_value());
     REQUIRE(run.exitCode() == 0);
 }
 
@@ -210,6 +210,6 @@ TEST_CASE("Words as the system gives them: 'wolfen' alone plays with no renderer
     const LauncherRun run{graphics, LauncherRun::ProgramNameFirst{}, {"wolfen"}};
     REQUIRE(run.out() == versionLine());
     REQUIRE(graphics.record.steps.front() == "open window");
-    REQUIRE_FALSE(graphics.record.requestedRenderer.has_value());
+    REQUIRE_FALSE(graphics.record.requestedBackend.has_value());
     REQUIRE(run.exitCode() == 0);
 }

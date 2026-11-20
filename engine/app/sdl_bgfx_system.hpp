@@ -9,7 +9,7 @@ namespace wolfen::engine::app {
 class SdlBgfxSystem final : public GraphicsSystem {
   public:
     std::unique_ptr<platform::Window> openWindow(const platform::WindowSettings& settings) override;
-    [[nodiscard]] std::vector<render::Backend> availableRenderers() const override;
+    [[nodiscard]] std::vector<render::Backend> availableBackends() const override;
     std::unique_ptr<render::Renderer>
     startRenderer(platform::Window& window, std::optional<render::Backend> backend) override;
 };

@@ -97,7 +97,7 @@ CommandLine::CommandLine(std::span<const std::string_view> args,
             fail(problem + ". Available: " + availableList(available));
             return;
         }
-        renderer_ = named->backend;
+        backend_ = named->backend;
     }
 }
 
@@ -110,8 +110,8 @@ CommandLine::Action CommandLine::action() const {
     return action_;
 }
 
-std::optional<Backend> CommandLine::renderer() const {
-    return renderer_;
+std::optional<Backend> CommandLine::backend() const {
+    return backend_;
 }
 
 const std::string& CommandLine::error() const {
