@@ -20,20 +20,13 @@ using wolfen::engine::render::RendererName;
 using wolfen::game::Game;
 using wolfen::tests::FakeGraphicsSystem;
 using wolfen::tests::GameRun;
-
-namespace {
-
-std::string startLine() {
-    return "Wolfen " + std::string{Version::current().text()} + "\n";
-}
-
-} // namespace
+using wolfen::tests::versionLine;
 
 TEST_CASE("The start line is printed before the window opens", "[game]") {
     FakeGraphicsSystem graphics;
     const GameRun run{graphics};
-    REQUIRE(graphics.record.outputWhenWindowOpened == startLine());
-    REQUIRE(run.out() == startLine());
+    REQUIRE(graphics.record.outputWhenWindowOpened == versionLine());
+    REQUIRE(run.out() == versionLine());
 }
 
 TEST_CASE("The window opens 1280x720, resizable, titled with the version", "[game]") {
@@ -158,7 +151,7 @@ TEST_CASE("The game starts the renderer it is given, after the start line", "[ga
     for (const auto backend : {Backend::Vulkan, Backend::OpenGL}) {
         FakeGraphicsSystem graphics;
         const GameRun run{graphics, backend};
-        REQUIRE(graphics.record.outputWhenWindowOpened == startLine());
+        REQUIRE(graphics.record.outputWhenWindowOpened == versionLine());
         REQUIRE(graphics.record.requestedRenderer == backend);
         REQUIRE(run.outcome() == Game::Outcome::Ended);
     }
@@ -179,7 +172,7 @@ TEST_CASE("A given renderer that fails to start: reported, nothing printed, wind
     graphics.rendererFailure = "the device could not be created";
     const GameRun run{graphics, Backend::Vulkan};
     REQUIRE(run.outcome() == Game::Outcome::ChosenRendererFailed);
-    REQUIRE(run.out() == startLine()); // the start line comes before the failure
+    REQUIRE(run.out() == versionLine()); // the start line comes before the failure
     REQUIRE(run.err().empty());
     REQUIRE(graphics.record.steps ==
             std::vector<std::string>{"open window", "start renderer", "close window"});

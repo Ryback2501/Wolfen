@@ -1,4 +1,3 @@
-#include "core/version.hpp"
 #include "fake_graphics.hpp"
 #include "launcher.hpp"
 #include "render/renderer_name.hpp"
@@ -11,16 +10,12 @@
 #include <string_view>
 #include <vector>
 
-using wolfen::engine::Version;
 using wolfen::engine::render::Backend;
 using wolfen::tests::FakeGraphicsSystem;
 using wolfen::tests::LauncherRun;
+using wolfen::tests::versionLine;
 
 namespace {
-
-std::string versionLine() {
-    return "Wolfen " + std::string{Version::current().text()} + "\n";
-}
 
 // The usage text approved for #3, with the given list of available renderers.
 std::string usage(std::string_view available) {
@@ -197,4 +192,24 @@ TEST_CASE("A start failure exits with 1", "[options][startup]") {
     const LauncherRun run{graphics, {}};
     REQUIRE(run.err() == "Wolfen could not start: no display available\n");
     REQUIRE(run.exitCode() == 1);
+}
+
+TEST_CASE("Words as the system gives them: 'wolfen --version' prints the version line, exit 0",
+          "[options][version][main]") {
+    FakeGraphicsSystem graphics;
+    const LauncherRun run{graphics, LauncherRun::ProgramNameFirst{}, {"wolfen", "--version"}};
+    REQUIRE(run.out() == versionLine());
+    REQUIRE(run.err().empty());
+    REQUIRE(graphics.record.steps.empty());
+    REQUIRE(run.exitCode() == 0);
+}
+
+TEST_CASE("Words as the system gives them: 'wolfen' alone plays with no renderer choice, exit 0",
+          "[options][renderer][main]") {
+    FakeGraphicsSystem graphics;
+    const LauncherRun run{graphics, LauncherRun::ProgramNameFirst{}, {"wolfen"}};
+    REQUIRE(run.out() == versionLine());
+    REQUIRE(graphics.record.steps.front() == "open window");
+    REQUIRE_FALSE(graphics.record.requestedRenderer.has_value());
+    REQUIRE(run.exitCode() == 0);
 }
