@@ -3,8 +3,11 @@
 #include "command_line.hpp"
 #include "game.hpp"
 
+#include <cstddef>
 #include <optional>
 #include <ostream>
+#include <span>
+#include <string_view>
 #include <vector>
 
 namespace wolfen::game {
@@ -44,6 +47,14 @@ int Launcher::run(std::span<const std::string_view> args) {
         break; // the game has already said why
     }
     return 1;
+}
+
+int Launcher::run(int argc, char** argv) {
+    // The start options, without the program's own name.
+    const std::span<char*> words{argv, static_cast<std::size_t>(argc)};
+    const std::vector<std::string_view> args(words.empty() ? words.end() : words.begin() + 1,
+                                             words.end());
+    return run(args);
 }
 
 } // namespace wolfen::game

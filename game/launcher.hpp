@@ -18,6 +18,9 @@ class Launcher {
     // Handles the given start options (without the program's name); returns the program's exit
     // code.
     int run(std::span<const std::string_view> args);
+    // The same, from the words exactly as the operating system gives them to main(): the
+    // program's name first, then the start options.
+    int run(int argc, char** argv);
 
   private:
     std::ostream* out_;
