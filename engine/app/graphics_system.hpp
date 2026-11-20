@@ -2,8 +2,8 @@
 #define WOLFEN_ENGINE_APP_GRAPHICS_SYSTEM_HPP
 
 #include "platform/window.hpp"
+#include "render/backend.hpp"
 #include "render/renderer.hpp"
-#include "render/renderer_name.hpp"
 
 #include <memory>
 #include <optional>

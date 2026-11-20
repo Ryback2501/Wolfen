@@ -2,8 +2,8 @@
 #define WOLFEN_ENGINE_RENDER_BGFX_RENDERER_HPP
 
 #include "platform/window.hpp"
+#include "render/backend.hpp"
 #include "render/renderer.hpp"
-#include "render/renderer_name.hpp"
 
 #include <optional>
 #include <string>

@@ -3,7 +3,7 @@
 
 // Included only by .cpp files in render/: it names bgfx types, and only render/ may use bgfx.
 
-#include "render/renderer_name.hpp"
+#include "render/backend.hpp"
 
 #include <bgfx/bgfx.h>
 
@@ -21,7 +21,9 @@ struct RendererRow {
     std::string_view displayName;
 };
 
-// Every renderer Wolfen names, one row each, so each renderer's details are written once.
+// Every renderer Wolfen names, one row each, so each renderer's details are written once. It holds
+// bgfx's types, so only engine/render/ may use it; RendererName gives everyone else the display
+// names without bgfx.
 class RendererTable {
   public:
     // The row for a backend, or null for Backend::Other.

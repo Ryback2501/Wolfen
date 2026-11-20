@@ -1,7 +1,7 @@
 #ifndef WOLFEN_GAME_COMMAND_LINE_HPP
 #define WOLFEN_GAME_COMMAND_LINE_HPP
 
-#include "render/renderer_name.hpp"
+#include "render/backend.hpp"
 
 #include <cstdint>
 #include <optional>

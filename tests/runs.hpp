@@ -5,7 +5,7 @@
 #include "fake_graphics.hpp"
 #include "game.hpp"
 #include "launcher.hpp"
-#include "render/renderer_name.hpp"
+#include "render/backend.hpp"
 
 #include <initializer_list>
 #include <optional>

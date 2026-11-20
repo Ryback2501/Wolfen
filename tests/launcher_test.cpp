@@ -1,6 +1,6 @@
 #include "fake_graphics.hpp"
 #include "launcher.hpp"
-#include "render/renderer_name.hpp"
+#include "render/backend.hpp"
 #include "runs.hpp"
 
 #include <catch2/catch_test_macros.hpp>
