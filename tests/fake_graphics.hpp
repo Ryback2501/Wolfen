@@ -141,8 +141,8 @@ class FakeGraphicsSystem final : public engine::app::GraphicsSystem {
 
     std::unique_ptr<engine::render::Renderer>
     startRenderer(engine::platform::Window& /*window*/,
-                  std::optional<engine::render::Backend> only) override {
-        record.requestedRenderer = only;
+                  std::optional<engine::render::Backend> backend) override {
+        record.requestedRenderer = backend;
         record.steps.emplace_back("start renderer");
         if (rendererFailure) {
             throw engine::StartupError{*rendererFailure};

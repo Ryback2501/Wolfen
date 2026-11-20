@@ -81,9 +81,9 @@ std::vector<Backend> BgfxRenderer::supportedBackends() {
     return backends;
 }
 
-BgfxRenderer::BgfxRenderer(const platform::Window& window, std::optional<Backend> only) {
-    const platform::NativeWindow native = window.nativeWindow();
-    if (native.window == nullptr) {
+BgfxRenderer::BgfxRenderer(const platform::Window& window, std::optional<Backend> backend) {
+    const platform::NativeWindow nativeWindow = window.nativeWindow();
+    if (nativeWindow.window == nullptr) {
         // bgfx would quietly start with no window at all, so stop before touching it.
         throw StartupError{"the window has no native window handle for the renderer"};
     }
@@ -95,14 +95,14 @@ BgfxRenderer::BgfxRenderer(const platform::Window& window, std::optional<Backend
     const Size size = window.pixelSize();
     bgfx::Init init;
     // The chosen backend and nothing else, or the best one for this computer with fallback.
-    const bool chosen = only.has_value() && *only != Backend::Other;
-    init.type = chosen ? bgfxTypeOf(*only) : bgfx::RendererType::Count;
-    init.fallback = !chosen;
-    init.platformData.type = native.kind == platform::NativeWindow::Kind::Wayland
+    const bool backendChosen = backend.has_value() && *backend != Backend::Other;
+    init.type = backendChosen ? bgfxTypeOf(*backend) : bgfx::RendererType::Count;
+    init.fallback = !backendChosen;
+    init.platformData.type = nativeWindow.kind == platform::NativeWindow::Kind::Wayland
                                  ? bgfx::NativeWindowHandleType::Wayland
                                  : bgfx::NativeWindowHandleType::Default;
-    init.swapChain.nwh = native.window;
-    init.swapChain.ndt = native.display;
+    init.swapChain.nwh = nativeWindow.window;
+    init.swapChain.ndt = nativeWindow.display;
     init.swapChain.width = static_cast<std::uint32_t>(size.width);
     init.swapChain.height = static_cast<std::uint32_t>(size.height);
     init.reset = resetFlags;

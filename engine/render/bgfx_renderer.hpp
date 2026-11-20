@@ -22,7 +22,7 @@ class BgfxRenderer final : public Renderer {
     // Starts the given backend and no other one; without one, lets bgfx pick the best backend
     // for this computer, falling back to another if it fails. Throws StartupError when it cannot.
     explicit BgfxRenderer(const platform::Window& window,
-                          std::optional<Backend> only = std::nullopt);
+                          std::optional<Backend> backend = std::nullopt);
     BgfxRenderer(const BgfxRenderer&) = delete;
     BgfxRenderer& operator=(const BgfxRenderer&) = delete;
     BgfxRenderer(BgfxRenderer&&) = delete;

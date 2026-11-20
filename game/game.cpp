@@ -30,26 +30,26 @@ int Game::run() {
     return run(std::nullopt);
 }
 
-int Game::run(std::optional<engine::render::Backend> renderer) {
+int Game::run(std::optional<engine::render::Backend> backend) {
     const std::string title = name();
     *out_ << title << '\n' << std::flush; // flushed, so it shows before the window opens
     try {
         // Declared in this order so the renderer is destroyed before the window it draws into.
         const auto window =
             graphics_->openWindow({.title = title, .size = windowSize, .resizable = true});
-        std::unique_ptr<engine::render::Renderer> started;
+        std::unique_ptr<engine::render::Renderer> renderer;
         try {
-            started = graphics_->startRenderer(*window, renderer);
+            renderer = graphics_->startRenderer(*window, backend);
         } catch (const engine::StartupError&) {
-            if (!renderer) {
+            if (!backend) {
                 throw;
             }
-            *err_ << "Renderer '" << CommandLine::optionName(*renderer)
+            *err_ << "Renderer '" << CommandLine::optionName(*backend)
                   << "' could not be started on this computer.\n";
             return 1;
         }
-        window->setTitle(title + " (" + std::string{started->name()} + ")");
-        play(*window, *started);
+        window->setTitle(title + " (" + std::string{renderer->name()} + ")");
+        play(*window, *renderer);
     } catch (const engine::StartupError& error) {
         *err_ << "Wolfen could not start: " << error.what() << '\n';
         return 1;

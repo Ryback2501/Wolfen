@@ -13,9 +13,9 @@ Launcher::Launcher(std::ostream& out, std::ostream& err, engine::app::GraphicsSy
 
 int Launcher::run(std::span<const std::string_view> args) {
     const std::vector<engine::render::Backend> available = graphics_->availableRenderers();
-    const CommandLine options{args, available};
+    const CommandLine commandLine{args, available};
 
-    switch (options.action()) {
+    switch (commandLine.action()) {
     case CommandLine::Action::Help:
         *out_ << CommandLine::usage(available);
         return 0;
@@ -23,14 +23,14 @@ int Launcher::run(std::span<const std::string_view> args) {
         *out_ << Game::name() << '\n';
         return 0;
     case CommandLine::Action::Error:
-        *err_ << options.error() << '\n' << CommandLine::hint() << '\n';
+        *err_ << commandLine.error() << '\n' << CommandLine::hint() << '\n';
         return 1;
     case CommandLine::Action::Run:
         break;
     }
 
     Game game{*out_, *err_, *graphics_};
-    return game.run(options.renderer());
+    return game.run(commandLine.renderer());
 }
 
 } // namespace wolfen::game
