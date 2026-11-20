@@ -2,6 +2,7 @@
 
 #include "core/startup_error.hpp"
 #include "render/renderer_name.hpp"
+#include "render/renderer_table.hpp"
 
 #include <bgfx/bgfx.h>
 
@@ -17,37 +18,16 @@ namespace {
 constexpr bgfx::ViewId mainView = 0;
 constexpr std::uint32_t resetFlags = BGFX_RESET_VSYNC; // one frame per screen refresh
 
-// Every backend Wolfen names, next to bgfx's renderer type for it. Each pair is written once.
-struct BackendType {
-    Backend backend;
-    bgfx::RendererType::Enum type;
-};
-
-constexpr std::array<BackendType, 5> backendTypes{
-    {{.backend = Backend::Vulkan, .type = bgfx::RendererType::Vulkan},
-     {.backend = Backend::OpenGL, .type = bgfx::RendererType::OpenGL},
-     {.backend = Backend::Metal, .type = bgfx::RendererType::Metal},
-     {.backend = Backend::Direct3D11, .type = bgfx::RendererType::Direct3D11},
-     {.backend = Backend::Direct3D12, .type = bgfx::RendererType::Direct3D12}}};
-
-// The backend for a bgfx renderer type; Backend::Other for a type not in the table.
+// The backend for a bgfx renderer type; Backend::Other for a type Wolfen does not name.
 Backend backendOf(bgfx::RendererType::Enum type) {
-    for (const BackendType& pair : backendTypes) {
-        if (pair.type == type) {
-            return pair.backend;
-        }
-    }
-    return Backend::Other;
+    const RendererRow* row = RendererTable::find(type);
+    return row == nullptr ? Backend::Other : row->backend;
 }
 
 // The bgfx renderer type for a backend; for Backend::Other, "let bgfx choose".
 bgfx::RendererType::Enum bgfxTypeOf(Backend backend) {
-    for (const BackendType& pair : backendTypes) {
-        if (pair.backend == backend) {
-            return pair.type;
-        }
-    }
-    return bgfx::RendererType::Count; // let bgfx choose
+    const RendererRow* row = RendererTable::find(backend);
+    return row == nullptr ? bgfx::RendererType::Count : row->type;
 }
 
 // Sets the swap chain's width and height to a size in pixels.
