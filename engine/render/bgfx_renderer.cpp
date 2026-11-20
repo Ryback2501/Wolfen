@@ -17,39 +17,43 @@ namespace {
 constexpr bgfx::ViewId mainView = 0;
 constexpr std::uint32_t resetFlags = BGFX_RESET_VSYNC; // one frame per screen refresh
 
+// Every backend Wolfen names, next to bgfx's renderer type for it. Each pair is written once.
+struct BackendType {
+    Backend backend;
+    bgfx::RendererType::Enum type;
+};
+
+constexpr std::array<BackendType, 5> backendTypes{
+    {{.backend = Backend::Vulkan, .type = bgfx::RendererType::Vulkan},
+     {.backend = Backend::OpenGL, .type = bgfx::RendererType::OpenGL},
+     {.backend = Backend::Metal, .type = bgfx::RendererType::Metal},
+     {.backend = Backend::Direct3D11, .type = bgfx::RendererType::Direct3D11},
+     {.backend = Backend::Direct3D12, .type = bgfx::RendererType::Direct3D12}}};
+
+// The backend for a bgfx renderer type; Backend::Other for a type not in the table.
 Backend backendOf(bgfx::RendererType::Enum type) {
-    switch (type) {
-    case bgfx::RendererType::Vulkan:
-        return Backend::Vulkan;
-    case bgfx::RendererType::OpenGL:
-        return Backend::OpenGL;
-    case bgfx::RendererType::Metal:
-        return Backend::Metal;
-    case bgfx::RendererType::Direct3D11:
-        return Backend::Direct3D11;
-    case bgfx::RendererType::Direct3D12:
-        return Backend::Direct3D12;
-    default:
-        return Backend::Other;
+    for (const BackendType& pair : backendTypes) {
+        if (pair.type == type) {
+            return pair.backend;
+        }
     }
+    return Backend::Other;
 }
 
+// The bgfx renderer type for a backend; for Backend::Other, "let bgfx choose".
 bgfx::RendererType::Enum bgfxTypeOf(Backend backend) {
-    switch (backend) {
-    case Backend::Vulkan:
-        return bgfx::RendererType::Vulkan;
-    case Backend::OpenGL:
-        return bgfx::RendererType::OpenGL;
-    case Backend::Metal:
-        return bgfx::RendererType::Metal;
-    case Backend::Direct3D11:
-        return bgfx::RendererType::Direct3D11;
-    case Backend::Direct3D12:
-        return bgfx::RendererType::Direct3D12;
-    case Backend::Other:
-        break;
+    for (const BackendType& pair : backendTypes) {
+        if (pair.backend == backend) {
+            return pair.type;
+        }
     }
     return bgfx::RendererType::Count; // let bgfx choose
+}
+
+// Sets the swap chain's width and height to a size in pixels.
+void setSwapChainSize(bgfx::SwapChain& swapChain, Size pixelSize) {
+    swapChain.width = static_cast<std::uint32_t>(pixelSize.width);
+    swapChain.height = static_cast<std::uint32_t>(pixelSize.height);
 }
 
 // bgfx's 0xRRGGBBAA form of a colour.
@@ -92,7 +96,6 @@ BgfxRenderer::BgfxRenderer(const platform::Window& window, std::optional<Backend
     // thread of its own (needed on macOS, where drawing must happen on the main thread).
     bgfx::renderFrame();
 
-    const Size size = window.pixelSize();
     bgfx::Init init;
     // The chosen backend and nothing else, or the best one for this computer with fallback.
     const bool backendChosen = backend.has_value() && *backend != Backend::Other;
@@ -103,8 +106,7 @@ BgfxRenderer::BgfxRenderer(const platform::Window& window, std::optional<Backend
                                  : bgfx::NativeWindowHandleType::Default;
     init.swapChain.nwh = nativeWindow.window;
     init.swapChain.ndt = nativeWindow.display;
-    init.swapChain.width = static_cast<std::uint32_t>(size.width);
-    init.swapChain.height = static_cast<std::uint32_t>(size.height);
+    setSwapChainSize(init.swapChain, window.pixelSize());
     init.reset = resetFlags;
     if (!bgfx::init(init)) {
         throw StartupError{"no renderer could start"};
@@ -132,8 +134,7 @@ std::string_view BgfxRenderer::name() const {
 
 void BgfxRenderer::resize(Size pixelSize) {
     bgfx::SwapChain swapChain;
-    swapChain.width = static_cast<std::uint32_t>(pixelSize.width);
-    swapChain.height = static_cast<std::uint32_t>(pixelSize.height);
+    setSwapChainSize(swapChain, pixelSize);
     bgfx::reset(resetFlags, &swapChain);
 }
 
