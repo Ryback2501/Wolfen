@@ -85,8 +85,8 @@ class LauncherRun final : public RunOutput {
     // words: the program's name and the words after it, for example {"wolfen", "--version"}.
     LauncherRun(FakeGraphicsSystem& graphics, ProgramNameFirst /*tag*/,
                 std::initializer_list<std::string_view> words) {
-        // Copies of the words that the launcher may change, and the list of them that main()
-        // receives: argc pointers, then a null one.
+        // main() receives non-const char* words, so the words are copied into strings this
+        // constructor owns. The list points to them: argc pointers, then a null one.
         std::vector<std::string> copies(words.begin(), words.end());
         std::vector<char*> argv;
         argv.reserve(copies.size() + 1);
