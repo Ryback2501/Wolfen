@@ -17,6 +17,7 @@ using wolfen::engine::Version;
 using wolfen::engine::platform::WindowEvent;
 using wolfen::engine::render::Backend;
 using wolfen::engine::render::RendererName;
+using wolfen::game::Game;
 using wolfen::tests::FakeGraphicsSystem;
 using wolfen::tests::GameRun;
 
@@ -63,20 +64,20 @@ TEST_CASE("Every frame fills the window with cornflower blue", "[game]") {
     REQUIRE(graphics.record.frames == std::vector<Colour>(3, cornflowerBlue));
 }
 
-TEST_CASE("The close button ends the game with exit code 0", "[game]") {
+TEST_CASE("The close button ends the game", "[game]") {
     FakeGraphicsSystem graphics;
     graphics.events = {{}, {WindowEvent::CloseRequested}, {}};
     const GameRun run{graphics};
-    REQUIRE(run.exitCode() == 0);
+    REQUIRE(run.outcome() == Game::Outcome::Ended);
     REQUIRE(graphics.record.frames.size() == 1);
     REQUIRE(run.err().empty());
 }
 
-TEST_CASE("Esc ends the game with exit code 0", "[game]") {
+TEST_CASE("Esc ends the game", "[game]") {
     FakeGraphicsSystem graphics;
     graphics.events = {{}, {WindowEvent::EscapePressed}, {}};
     const GameRun run{graphics};
-    REQUIRE(run.exitCode() == 0);
+    REQUIRE(run.outcome() == Game::Outcome::Ended);
     REQUIRE(graphics.record.frames.size() == 1);
 }
 
@@ -96,21 +97,23 @@ TEST_CASE("When the game ends, the renderer closes before the window", "[game]")
                                                               "close renderer", "close window"});
 }
 
-TEST_CASE("A window that cannot open: message on stderr, non-zero exit code", "[game][startup]") {
+TEST_CASE("A window that cannot open: message on stderr, the game could not start",
+          "[game][startup]") {
     FakeGraphicsSystem graphics;
     graphics.windowFailure = "no display available";
     const GameRun run{graphics};
-    REQUIRE(run.exitCode() != 0);
+    REQUIRE(run.outcome() == Game::Outcome::CouldNotStart);
     REQUIRE(run.err() == "Wolfen could not start: no display available\n");
     REQUIRE(graphics.record.steps == std::vector<std::string>{"open window"});
 }
 
-TEST_CASE("A renderer that cannot start: message on stderr, non-zero exit code, window closed",
+TEST_CASE("A renderer that cannot start: message on stderr, the game could not start, window "
+          "closed",
           "[game][startup]") {
     FakeGraphicsSystem graphics;
     graphics.rendererFailure = "no renderer could start";
     const GameRun run{graphics};
-    REQUIRE(run.exitCode() != 0);
+    REQUIRE(run.outcome() == Game::Outcome::CouldNotStart);
     REQUIRE(run.err() == "Wolfen could not start: no renderer could start\n");
     REQUIRE(graphics.record.steps ==
             std::vector<std::string>{"open window", "start renderer", "close window"});
@@ -139,7 +142,7 @@ TEST_CASE("A hidden window is not drawn; the game sleeps until it is shown again
     REQUIRE(graphics.record.frames.size() == 4);
     // The batches after Hidden (3rd, 4th, 5th) are waited for, not polled.
     REQUIRE(graphics.record.waits == 3);
-    REQUIRE(run.exitCode() == 0);
+    REQUIRE(run.outcome() == Game::Outcome::Ended);
 }
 
 TEST_CASE("A hidden window can still be closed", "[game]") {
@@ -148,7 +151,7 @@ TEST_CASE("A hidden window can still be closed", "[game]") {
     const GameRun run{graphics};
     REQUIRE(graphics.record.frames.empty());
     REQUIRE(graphics.record.waits == 1);
-    REQUIRE(run.exitCode() == 0);
+    REQUIRE(run.outcome() == Game::Outcome::Ended);
 }
 
 TEST_CASE("The game starts the renderer it is given, after the start line", "[game][renderer]") {
@@ -157,7 +160,7 @@ TEST_CASE("The game starts the renderer it is given, after the start line", "[ga
         const GameRun run{graphics, backend};
         REQUIRE(graphics.record.outputWhenWindowOpened == startLine());
         REQUIRE(graphics.record.requestedRenderer == backend);
-        REQUIRE(run.exitCode() == 0);
+        REQUIRE(run.outcome() == Game::Outcome::Ended);
     }
 }
 
@@ -167,17 +170,17 @@ TEST_CASE("Given no renderer, the game lets the engine choose", "[game][renderer
     REQUIRE(graphics.record.steps.size() >= 2);
     REQUIRE(graphics.record.steps.at(1) == "start renderer");
     REQUIRE_FALSE(graphics.record.requestedRenderer.has_value());
-    REQUIRE(run.exitCode() == 0);
+    REQUIRE(run.outcome() == Game::Outcome::Ended);
 }
 
-TEST_CASE("A given renderer that fails to start: its own message, exit 1, window closed",
+TEST_CASE("A given renderer that fails to start: reported, nothing printed, window closed",
           "[game][renderer][startup]") {
     FakeGraphicsSystem graphics;
     graphics.rendererFailure = "the device could not be created";
     const GameRun run{graphics, Backend::Vulkan};
+    REQUIRE(run.outcome() == Game::Outcome::ChosenRendererFailed);
     REQUIRE(run.out() == startLine()); // the start line comes before the failure
-    REQUIRE(run.err() == "Renderer 'vulkan' could not be started on this computer.\n");
+    REQUIRE(run.err().empty());
     REQUIRE(graphics.record.steps ==
             std::vector<std::string>{"open window", "start renderer", "close window"});
-    REQUIRE(run.exitCode() == 1);
 }

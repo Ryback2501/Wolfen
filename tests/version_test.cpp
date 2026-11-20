@@ -1,5 +1,6 @@
 #include "core/version.hpp"
 #include "fake_graphics.hpp"
+#include "game.hpp"
 #include "runs.hpp"
 
 #include <catch2/catch_test_macros.hpp>
@@ -22,6 +23,7 @@ std::string versionFileText() {
 } // namespace
 
 using wolfen::engine::Version;
+using wolfen::game::Game;
 using wolfen::tests::FakeGraphicsSystem;
 using wolfen::tests::GameRun;
 
@@ -41,8 +43,8 @@ TEST_CASE("Running the game prints 'Wolfen <version>' on exactly one line", "[ga
     REQUIRE(run.out() == "Wolfen " + versionFileText() + "\n");
 }
 
-TEST_CASE("Running the game ends with exit code 0", "[game]") {
+TEST_CASE("Running the game ends normally", "[game]") {
     FakeGraphicsSystem graphics;
     const GameRun run{graphics};
-    REQUIRE(run.exitCode() == 0);
+    REQUIRE(run.outcome() == Game::Outcome::Ended);
 }
