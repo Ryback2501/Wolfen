@@ -89,6 +89,7 @@ class LauncherRun final : public RunOutput {
         // receives: argc pointers, then a null one.
         std::vector<std::string> copies(words.begin(), words.end());
         std::vector<char*> argv;
+        argv.reserve(copies.size() + 1);
         for (std::string& copy : copies) {
             argv.push_back(copy.data());
         }
