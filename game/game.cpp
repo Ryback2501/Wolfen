@@ -1,6 +1,5 @@
 #include "game.hpp"
 
-#include "command_line.hpp"
 #include "core/colour.hpp"
 #include "core/startup_error.hpp"
 #include "core/version.hpp"
@@ -26,11 +25,11 @@ std::string Game::name() {
     return "Wolfen " + std::string{engine::Version::current().text()};
 }
 
-int Game::run() {
+Game::Outcome Game::run() {
     return run(std::nullopt);
 }
 
-int Game::run(std::optional<engine::render::Backend> backend) {
+Game::Outcome Game::run(std::optional<engine::render::Backend> backend) {
     const std::string title = name();
     *out_ << title << '\n' << std::flush; // flushed, so it shows before the window opens
     try {
@@ -44,17 +43,15 @@ int Game::run(std::optional<engine::render::Backend> backend) {
             if (!backend) {
                 throw;
             }
-            *err_ << "Renderer '" << CommandLine::optionName(*backend)
-                  << "' could not be started on this computer.\n";
-            return 1;
+            return Outcome::ChosenRendererFailed;
         }
         window->setTitle(title + " (" + std::string{renderer->name()} + ")");
         play(*window, *renderer);
     } catch (const engine::StartupError& error) {
         *err_ << "Wolfen could not start: " << error.what() << '\n';
-        return 1;
+        return Outcome::CouldNotStart;
     }
-    return 0;
+    return Outcome::Ended;
 }
 
 void Game::play(engine::platform::Window& window, engine::render::Renderer& renderer) {

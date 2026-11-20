@@ -3,6 +3,7 @@
 #include "command_line.hpp"
 #include "game.hpp"
 
+#include <optional>
 #include <ostream>
 #include <vector>
 
@@ -29,8 +30,20 @@ int Launcher::run(std::span<const std::string_view> args) {
         break;
     }
 
+    const std::optional<engine::render::Backend> backend = commandLine.renderer();
     Game game{*out_, *err_, *graphics_};
-    return game.run(commandLine.renderer());
+    switch (game.run(backend)) {
+    case Game::Outcome::Ended:
+        return 0;
+    case Game::Outcome::ChosenRendererFailed:
+        *err_ << "Renderer '"
+              << CommandLine::optionName(backend.value_or(engine::render::Backend::Other))
+              << "' could not be started on this computer.\n";
+        return 1;
+    case Game::Outcome::CouldNotStart:
+        break; // the game has already said why
+    }
+    return 1;
 }
 
 } // namespace wolfen::game
