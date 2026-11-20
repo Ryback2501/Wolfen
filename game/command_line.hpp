@@ -1,7 +1,7 @@
 #ifndef WOLFEN_GAME_COMMAND_LINE_HPP
 #define WOLFEN_GAME_COMMAND_LINE_HPP
 
-#include "render/renderer_name.hpp"
+#include "render/backend.hpp"
 
 #include <cstdint>
 #include <optional>
@@ -23,7 +23,7 @@ class CommandLine {
 
     [[nodiscard]] Action action() const;
     // For Run: the renderer asked for with --renderer, if any.
-    [[nodiscard]] std::optional<engine::render::Backend> renderer() const;
+    [[nodiscard]] std::optional<engine::render::Backend> backend() const;
     // For Error: the message to show, without the usage.
     [[nodiscard]] const std::string& error() const;
 
@@ -39,7 +39,7 @@ class CommandLine {
     void fail(std::string message);
 
     Action action_{Action::Run};
-    std::optional<engine::render::Backend> renderer_;
+    std::optional<engine::render::Backend> backend_;
     std::string error_;
 };
 

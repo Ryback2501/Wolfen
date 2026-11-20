@@ -3,7 +3,7 @@
 
 // Included only by .cpp files in render/: it names bgfx types, and only render/ may use bgfx.
 
-#include "render/renderer_name.hpp"
+#include "render/backend.hpp"
 
 #include <bgfx/bgfx.h>
 
@@ -17,11 +17,13 @@ namespace wolfen::engine::render {
 // people.
 struct RendererRow {
     Backend backend;
-    bgfx::RendererType::Enum type;
+    bgfx::RendererType::Enum bgfxType;
     std::string_view displayName;
 };
 
-// Every renderer Wolfen names, one row each, so each renderer's details are written once.
+// Every renderer Wolfen names, one row each, so each renderer's details are written once. It holds
+// bgfx's types, so only engine/render/ may use it; RendererName gives everyone else the display
+// names without bgfx.
 class RendererTable {
   public:
     // The row for a backend, or null for Backend::Other.
@@ -30,21 +32,25 @@ class RendererTable {
     }
 
     // The row for a bgfx renderer type, or null for a type Wolfen does not name.
-    static constexpr const RendererRow* find(bgfx::RendererType::Enum type) {
-        return findRow([type](const RendererRow& row) { return row.type == type; });
+    static constexpr const RendererRow* find(bgfx::RendererType::Enum bgfxType) {
+        return findRow([bgfxType](const RendererRow& row) { return row.bgfxType == bgfxType; });
     }
 
   private:
     // In the order of Backend, one row for every value before Other.
     static constexpr std::array<RendererRow, 5> rows_{
-        {{.backend = Backend::Vulkan, .type = bgfx::RendererType::Vulkan, .displayName = "Vulkan"},
-         {.backend = Backend::OpenGL, .type = bgfx::RendererType::OpenGL, .displayName = "OpenGL"},
-         {.backend = Backend::Metal, .type = bgfx::RendererType::Metal, .displayName = "Metal"},
+        {{.backend = Backend::Vulkan,
+          .bgfxType = bgfx::RendererType::Vulkan,
+          .displayName = "Vulkan"},
+         {.backend = Backend::OpenGL,
+          .bgfxType = bgfx::RendererType::OpenGL,
+          .displayName = "OpenGL"},
+         {.backend = Backend::Metal, .bgfxType = bgfx::RendererType::Metal, .displayName = "Metal"},
          {.backend = Backend::Direct3D11,
-          .type = bgfx::RendererType::Direct3D11,
+          .bgfxType = bgfx::RendererType::Direct3D11,
           .displayName = "Direct3D 11"},
          {.backend = Backend::Direct3D12,
-          .type = bgfx::RendererType::Direct3D12,
+          .bgfxType = bgfx::RendererType::Direct3D12,
           .displayName = "Direct3D 12"}}};
 
     // The first row that `matches` accepts, or null. A plain loop returning a pointer, so the code

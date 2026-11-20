@@ -23,8 +23,7 @@ struct GraphicsRecord {
     std::vector<std::string> titles;
     std::vector<engine::Colour> frames;
     std::vector<engine::Size> resizes;
-    std::optional<engine::render::Backend>
-        requestedRenderer;              // as asked of the last startRenderer()
+    std::optional<engine::render::Backend> requestedBackend; // as asked of the last startRenderer()
     int waits{};                        // how many times the game slept until the window had events
     std::string outputWhenWindowOpened; // what the game had printed when it opened the window
 };
@@ -122,7 +121,7 @@ class FakeGraphicsSystem final : public engine::app::GraphicsSystem {
                                                    engine::render::Backend::OpenGL};
     const std::ostringstream* watchedOutput{}; // when set, recorded when the window opens
 
-    [[nodiscard]] std::vector<engine::render::Backend> availableRenderers() const override {
+    [[nodiscard]] std::vector<engine::render::Backend> availableBackends() const override {
         return available;
     }
 
@@ -142,7 +141,7 @@ class FakeGraphicsSystem final : public engine::app::GraphicsSystem {
     std::unique_ptr<engine::render::Renderer>
     startRenderer(engine::platform::Window& /*window*/,
                   std::optional<engine::render::Backend> backend) override {
-        record.requestedRenderer = backend;
+        record.requestedBackend = backend;
         record.steps.emplace_back("start renderer");
         if (rendererFailure) {
             throw engine::StartupError{*rendererFailure};

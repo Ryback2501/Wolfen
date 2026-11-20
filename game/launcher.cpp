@@ -3,8 +3,11 @@
 #include "command_line.hpp"
 #include "game.hpp"
 
+#include <cstddef>
 #include <optional>
 #include <ostream>
+#include <span>
+#include <string_view>
 #include <vector>
 
 namespace wolfen::game {
@@ -13,7 +16,7 @@ Launcher::Launcher(std::ostream& out, std::ostream& err, engine::app::GraphicsSy
     : out_{&out}, err_{&err}, graphics_{&graphics} {}
 
 int Launcher::run(std::span<const std::string_view> args) {
-    const std::vector<engine::render::Backend> available = graphics_->availableRenderers();
+    const std::vector<engine::render::Backend> available = graphics_->availableBackends();
     const CommandLine commandLine{args, available};
 
     switch (commandLine.action()) {
@@ -30,7 +33,7 @@ int Launcher::run(std::span<const std::string_view> args) {
         break;
     }
 
-    const std::optional<engine::render::Backend> backend = commandLine.renderer();
+    const std::optional<engine::render::Backend> backend = commandLine.backend();
     Game game{*out_, *err_, *graphics_};
     switch (game.run(backend)) {
     case Game::Outcome::Ended:
@@ -44,6 +47,14 @@ int Launcher::run(std::span<const std::string_view> args) {
         break; // the game has already said why
     }
     return 1;
+}
+
+int Launcher::run(int argc, char** argv) {
+    // The start options, without the program's own name.
+    const std::span<char*> words{argv, static_cast<std::size_t>(argc)};
+    const std::vector<std::string_view> args(words.empty() ? words.end() : words.begin() + 1,
+                                             words.end());
+    return run(args);
 }
 
 } // namespace wolfen::game

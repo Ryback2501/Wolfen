@@ -2,8 +2,8 @@
 #define WOLFEN_ENGINE_RENDER_BGFX_RENDERER_HPP
 
 #include "platform/window.hpp"
+#include "render/backend.hpp"
 #include "render/renderer.hpp"
-#include "render/renderer_name.hpp"
 
 #include <optional>
 #include <string>
@@ -17,7 +17,7 @@ class BgfxRenderer final : public Renderer {
   public:
     // The backends bgfx supports on this computer, among the ones Wolfen names. Needs no window
     // and does not start bgfx.
-    static std::vector<Backend> supportedBackends();
+    static std::vector<Backend> availableBackends();
 
     // Starts the given backend and no other one; without one, lets bgfx pick the best backend
     // for this computer, falling back to another if it fails. Throws StartupError when it cannot.

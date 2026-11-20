@@ -1,10 +1,11 @@
 #ifndef WOLFEN_TESTS_RUNS_HPP
 #define WOLFEN_TESTS_RUNS_HPP
 
+#include "core/version.hpp"
 #include "fake_graphics.hpp"
 #include "game.hpp"
 #include "launcher.hpp"
-#include "render/renderer_name.hpp"
+#include "render/backend.hpp"
 
 #include <initializer_list>
 #include <optional>
@@ -14,6 +15,11 @@
 #include <vector>
 
 namespace wolfen::tests {
+
+// The line the game prints when it starts, and for --version: "Wolfen vX.Y.Z".
+inline std::string versionLine() {
+    return "Wolfen " + std::string{engine::Version::current().text()} + "\n";
+}
 
 // What one run printed on its two output streams.
 class RunOutput {
@@ -68,16 +74,36 @@ class GameRun final : public RunOutput {
 // Runs the launcher once with the given start options and fake graphics system.
 class LauncherRun final : public RunOutput {
   public:
+    // Says that the words start with the program's name, as the operating system gives them.
+    struct ProgramNameFirst {};
+
+    // args: the words after the program's name.
     LauncherRun(FakeGraphicsSystem& graphics, std::initializer_list<std::string_view> args)
         : exitCode_{game::Launcher{outStream(), errStream(), graphics}.run(
               std::vector<std::string_view>{args})} {}
+
+    // words: the program's name and the words after it, for example {"wolfen", "--version"}.
+    LauncherRun(FakeGraphicsSystem& graphics, ProgramNameFirst /*tag*/,
+                std::initializer_list<std::string_view> words) {
+        // main() receives non-const char* words, so the words are copied into strings this
+        // constructor owns. The list points to them: argc pointers, then a null one.
+        std::vector<std::string> copies(words.begin(), words.end());
+        std::vector<char*> argv;
+        argv.reserve(copies.size() + 1);
+        for (std::string& copy : copies) {
+            argv.push_back(copy.data());
+        }
+        argv.push_back(nullptr);
+        const int argc = static_cast<int>(copies.size());
+        exitCode_ = game::Launcher{outStream(), errStream(), graphics}.run(argc, argv.data());
+    }
 
     [[nodiscard]] int exitCode() const {
         return exitCode_;
     }
 
   private:
-    int exitCode_;
+    int exitCode_{};
 };
 
 } // namespace wolfen::tests
