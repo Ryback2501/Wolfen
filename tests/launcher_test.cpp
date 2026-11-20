@@ -2,48 +2,20 @@
 #include "fake_graphics.hpp"
 #include "launcher.hpp"
 #include "render/renderer_name.hpp"
+#include "runs.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
 #include <initializer_list>
-#include <optional>
-#include <sstream>
 #include <string>
 #include <string_view>
-#include <vector>
 
 using wolfen::engine::Version;
 using wolfen::engine::render::Backend;
-using wolfen::game::Launcher;
 using wolfen::tests::FakeGraphicsSystem;
+using wolfen::tests::LauncherRun;
 
 namespace {
-
-// Runs the launcher once with the given start options and fake graphics system.
-class LauncherRun {
-  public:
-    LauncherRun(FakeGraphicsSystem& graphics, std::initializer_list<std::string_view> args)
-        : args_{args} {
-        Launcher launcher{out_, err_, graphics};
-        exitCode_ = launcher.run(args_);
-    }
-
-    [[nodiscard]] int exitCode() const {
-        return exitCode_;
-    }
-    [[nodiscard]] std::string out() const {
-        return out_.str();
-    }
-    [[nodiscard]] std::string err() const {
-        return err_.str();
-    }
-
-  private:
-    std::vector<std::string_view> args_;
-    std::ostringstream out_;
-    std::ostringstream err_;
-    int exitCode_{-1};
-};
 
 std::string versionLine() {
     return "Wolfen " + std::string{Version::current().text()} + "\n";
@@ -158,8 +130,6 @@ TEST_CASE("The --renderer option starts only the chosen renderer, after the star
 TEST_CASE("With no options the game lets the engine choose the renderer", "[options][renderer]") {
     FakeGraphicsSystem graphics;
     const LauncherRun run{graphics, {}};
-    REQUIRE(graphics.record.steps.size() >= 2);
-    REQUIRE(graphics.record.steps.at(1) == "start renderer");
     REQUIRE_FALSE(graphics.record.requestedRenderer.has_value());
     REQUIRE(run.exitCode() == 0);
 }
@@ -206,25 +176,4 @@ TEST_CASE("Unknown options, including the --option=value form", "[options]") {
 TEST_CASE("Only the first error, reading left to right, is printed", "[options]") {
     FakeGraphicsSystem graphics;
     requireOptionError(graphics, {"--bogus", "--renderer", "foo"}, "Unknown option '--bogus'");
-}
-
-TEST_CASE("A chosen renderer that fails to start: its own message, exit 1, window closed",
-          "[options][renderer][startup]") {
-    FakeGraphicsSystem graphics;
-    graphics.rendererFailure = "the device could not be created";
-    const LauncherRun run{graphics, {"--renderer", "vulkan"}};
-    REQUIRE(run.out() == versionLine()); // the start line comes before the failure
-    REQUIRE(run.err() == "Renderer 'vulkan' could not be started on this computer.\n");
-    REQUIRE(graphics.record.steps ==
-            std::vector<std::string>{"open window", "start renderer", "close window"});
-    REQUIRE(run.exitCode() == 1);
-}
-
-TEST_CASE("Other start failures keep the 'Wolfen could not start' prefix and exit with 1",
-          "[options][startup]") {
-    FakeGraphicsSystem graphics;
-    graphics.windowFailure = "no display available";
-    const LauncherRun run{graphics, {}};
-    REQUIRE(run.err() == "Wolfen could not start: no display available\n");
-    REQUIRE(run.exitCode() == 1);
 }

@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
+#include <type_traits>
 #include <utility>
 
 namespace wolfen::game {
@@ -24,41 +25,31 @@ constexpr std::array<NamedRenderer, 5> knownRenderers{
      {.name = "d3d11", .backend = Backend::Direct3D11},
      {.name = "d3d12", .backend = Backend::Direct3D12}}};
 
-// The known renderer with this name or backend, or null. A plain loop returning a pointer, so the
-// code does not depend on whether the library's array iterators are pointers.
-const NamedRenderer* knownRenderer(std::string_view name) {
-    for (const NamedRenderer& known : knownRenderers) {
-        if (known.name == name) {
-            return &known;
+// The first known renderer that `matches` accepts, or null. A plain loop returning a pointer, so
+// the code does not depend on whether the library's array iterators are pointers.
+template <typename Matches> const NamedRenderer* knownRenderer(const Matches& matches) {
+    for (const NamedRenderer& named : knownRenderers) {
+        if (matches(named)) {
+            return &named;
         }
     }
     return nullptr;
 }
 
-const NamedRenderer* knownRenderer(Backend backend) {
-    for (const NamedRenderer& known : knownRenderers) {
-        if (known.backend == backend) {
-            return &known;
-        }
-    }
-    return nullptr;
-}
-
-bool contains(std::span<const std::string_view> words, std::string_view word) {
-    return std::ranges::find(words, word) != words.end();
-}
-
-bool contains(std::span<const Backend> backends, Backend backend) {
-    return std::ranges::find(backends, backend) != backends.end();
+// Whether the list holds the item. The item's type is taken from the list, so "--help" is
+// compared as a string_view.
+template <typename Item>
+bool contains(std::span<const Item> list, const std::type_identity_t<Item>& item) {
+    return std::ranges::find(list, item) != list.end();
 }
 
 // The available renderers, by name, in the fixed order: "vulkan, opengl", or "(none)".
 std::string availableList(std::span<const Backend> available) {
     std::string list;
-    for (const auto& known : knownRenderers) {
-        if (contains(available, known.backend)) {
+    for (const auto& named : knownRenderers) {
+        if (contains(available, named.backend)) {
             list += list.empty() ? "" : ", ";
-            list += known.name;
+            list += named.name;
         }
     }
     return list.empty() ? "(none)" : list;
@@ -97,17 +88,16 @@ CommandLine::CommandLine(std::span<const std::string_view> args,
             return;
         }
         const std::string name{args[++i]};
-        const NamedRenderer* known = knownRenderer(name);
-        if (known == nullptr) {
-            fail("Unknown renderer '" + name + "'. Available: " + availableList(available));
+        const NamedRenderer* named = knownRenderer(
+            [&name](const NamedRenderer& candidate) { return candidate.name == name; });
+        if (named == nullptr || !contains(available, named->backend)) {
+            const std::string problem =
+                named == nullptr ? "Unknown renderer '" + name + "'"
+                                 : "Renderer '" + name + "' is not available on this computer";
+            fail(problem + ". Available: " + availableList(available));
             return;
         }
-        if (!contains(available, known->backend)) {
-            fail("Renderer '" + name +
-                 "' is not available on this computer. Available: " + availableList(available));
-            return;
-        }
-        renderer_ = known->backend;
+        renderer_ = named->backend;
     }
 }
 
@@ -146,8 +136,9 @@ std::string_view CommandLine::hint() {
 }
 
 std::string_view CommandLine::optionName(Backend backend) {
-    const NamedRenderer* known = knownRenderer(backend);
-    return known == nullptr ? std::string_view{} : known->name;
+    const NamedRenderer* named = knownRenderer(
+        [backend](const NamedRenderer& candidate) { return candidate.backend == backend; });
+    return named == nullptr ? std::string_view{} : named->name;
 }
 
 } // namespace wolfen::game

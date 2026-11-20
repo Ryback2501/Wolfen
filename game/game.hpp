@@ -21,7 +21,7 @@ class Game {
 
     // Runs the game with the given renderer, or the best one for this computer when none is given,
     // until it ends; returns the program's exit code.
-    int run(std::optional<engine::render::Backend> renderer);
+    int run(std::optional<engine::render::Backend> backend);
     // Runs the game with the best renderer for this computer.
     int run();
 

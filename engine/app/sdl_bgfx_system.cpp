@@ -15,8 +15,8 @@ std::vector<render::Backend> SdlBgfxSystem::availableRenderers() const {
 }
 
 std::unique_ptr<render::Renderer>
-SdlBgfxSystem::startRenderer(platform::Window& window, std::optional<render::Backend> only) {
-    return std::make_unique<render::BgfxRenderer>(window, only);
+SdlBgfxSystem::startRenderer(platform::Window& window, std::optional<render::Backend> backend) {
+    return std::make_unique<render::BgfxRenderer>(window, backend);
 }
 
 } // namespace wolfen::engine::app

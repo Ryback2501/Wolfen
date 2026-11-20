@@ -3,11 +3,11 @@
 #include "fake_graphics.hpp"
 #include "game.hpp"
 #include "render/renderer_name.hpp"
+#include "runs.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
 #include <optional>
-#include <sstream>
 #include <string>
 #include <vector>
 
@@ -17,41 +17,10 @@ using wolfen::engine::Version;
 using wolfen::engine::platform::WindowEvent;
 using wolfen::engine::render::Backend;
 using wolfen::engine::render::RendererName;
-using wolfen::game::Game;
 using wolfen::tests::FakeGraphicsSystem;
+using wolfen::tests::GameRun;
 
 namespace {
-
-// Runs the game once with the given fake graphics system.
-class GameRun {
-  public:
-    explicit GameRun(FakeGraphicsSystem& graphics) {
-        graphics.watchedOutput = &out_;
-        Game game{out_, err_, graphics};
-        exitCode_ = game.run();
-    }
-    // Runs it with the given renderer choice, already checked by the launcher.
-    GameRun(FakeGraphicsSystem& graphics, std::optional<Backend> renderer) {
-        graphics.watchedOutput = &out_;
-        Game game{out_, err_, graphics};
-        exitCode_ = game.run(renderer);
-    }
-
-    [[nodiscard]] int exitCode() const {
-        return exitCode_;
-    }
-    [[nodiscard]] std::string out() const {
-        return out_.str();
-    }
-    [[nodiscard]] std::string err() const {
-        return err_.str();
-    }
-
-  private:
-    std::ostringstream out_;
-    std::ostringstream err_;
-    int exitCode_{-1};
-};
 
 std::string startLine() {
     return "Wolfen " + std::string{Version::current().text()} + "\n";

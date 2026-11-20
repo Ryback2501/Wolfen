@@ -1,12 +1,11 @@
 #include "core/version.hpp"
 #include "fake_graphics.hpp"
-#include "game.hpp"
+#include "runs.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
 #include <fstream>
 #include <regex>
-#include <sstream>
 #include <string>
 
 namespace {
@@ -23,7 +22,8 @@ std::string versionFileText() {
 } // namespace
 
 using wolfen::engine::Version;
-using wolfen::game::Game;
+using wolfen::tests::FakeGraphicsSystem;
+using wolfen::tests::GameRun;
 
 TEST_CASE("The version is the one written in the VERSION file", "[version]") {
     REQUIRE_FALSE(versionFileText().empty());
@@ -36,18 +36,13 @@ TEST_CASE("The version looks like vX.Y.Z", "[version]") {
 }
 
 TEST_CASE("Running the game prints 'Wolfen <version>' on exactly one line", "[game]") {
-    std::ostringstream out;
-    std::ostringstream err;
-    wolfen::tests::FakeGraphicsSystem graphics;
-    Game game{out, err, graphics};
-    game.run();
-    REQUIRE(out.str() == "Wolfen " + versionFileText() + "\n");
+    FakeGraphicsSystem graphics;
+    const GameRun run{graphics};
+    REQUIRE(run.out() == "Wolfen " + versionFileText() + "\n");
 }
 
 TEST_CASE("Running the game ends with exit code 0", "[game]") {
-    std::ostringstream out;
-    std::ostringstream err;
-    wolfen::tests::FakeGraphicsSystem graphics;
-    Game game{out, err, graphics};
-    REQUIRE(game.run() == 0);
+    FakeGraphicsSystem graphics;
+    const GameRun run{graphics};
+    REQUIRE(run.exitCode() == 0);
 }

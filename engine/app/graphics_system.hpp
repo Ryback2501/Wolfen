@@ -32,7 +32,7 @@ class GraphicsSystem {
     // to another if it fails) when none is given. Throws StartupError when it cannot start. The
     // renderer must be destroyed before the window it draws into.
     virtual std::unique_ptr<render::Renderer>
-    startRenderer(platform::Window& window, std::optional<render::Backend> only) = 0;
+    startRenderer(platform::Window& window, std::optional<render::Backend> backend) = 0;
 };
 
 } // namespace wolfen::engine::app

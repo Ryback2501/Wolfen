@@ -95,15 +95,10 @@ std::vector<WindowEvent> SdlWindow::pollEvents() {
 }
 
 std::vector<WindowEvent> SdlWindow::waitEvents() {
-    std::vector<WindowEvent> events;
-    SDL_Event event;
-    if (SDL_WaitEvent(&event)) {
-        addWindowEvent(event, events);
-    }
-    while (SDL_PollEvent(&event)) {
-        addWindowEvent(event, events);
-    }
-    return events;
+    // Sleeps until there is an event and leaves it in the queue, so pollEvents() takes it with the
+    // rest. If waiting fails, the queue is polled as it is.
+    SDL_WaitEvent(nullptr);
+    return pollEvents();
 }
 
 Size SdlWindow::pixelSize() const {
