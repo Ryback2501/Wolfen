@@ -27,7 +27,7 @@ Backend backendOf(bgfx::RendererType::Enum type) {
 // The bgfx renderer type for a backend; for Backend::Other, "let bgfx choose".
 bgfx::RendererType::Enum bgfxTypeOf(Backend backend) {
     const RendererRow* row = RendererTable::find(backend);
-    return row == nullptr ? bgfx::RendererType::Count : row->type;
+    return row == nullptr ? bgfx::RendererType::Count : row->bgfxType;
 }
 
 // Sets the swap chain's width and height to a size in pixels.
