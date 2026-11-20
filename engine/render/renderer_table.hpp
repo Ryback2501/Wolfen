@@ -26,22 +26,12 @@ class RendererTable {
   public:
     // The row for a backend, or null for Backend::Other.
     static constexpr const RendererRow* find(Backend backend) {
-        for (const RendererRow& row : rows_) {
-            if (row.backend == backend) {
-                return &row;
-            }
-        }
-        return nullptr;
+        return findRow([backend](const RendererRow& row) { return row.backend == backend; });
     }
 
     // The row for a bgfx renderer type, or null for a type Wolfen does not name.
     static constexpr const RendererRow* find(bgfx::RendererType::Enum type) {
-        for (const RendererRow& row : rows_) {
-            if (row.type == type) {
-                return &row;
-            }
-        }
-        return nullptr;
+        return findRow([type](const RendererRow& row) { return row.type == type; });
     }
 
   private:
@@ -56,6 +46,18 @@ class RendererTable {
          {.backend = Backend::Direct3D12,
           .type = bgfx::RendererType::Direct3D12,
           .displayName = "Direct3D 12"}}};
+
+    // The first row that `matches` accepts, or null. A plain loop returning a pointer, so the code
+    // does not depend on whether the library's array iterators are pointers.
+    template <typename Matches>
+    static constexpr const RendererRow* findRow(const Matches& matches) {
+        for (const RendererRow& row : rows_) {
+            if (matches(row)) {
+                return &row;
+            }
+        }
+        return nullptr;
+    }
 
     // A Backend value added before Other without its row (or rows out of order) stops the build.
     static_assert(
