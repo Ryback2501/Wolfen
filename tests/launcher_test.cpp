@@ -9,6 +9,7 @@
 #include <initializer_list>
 #include <string>
 #include <string_view>
+#include <vector>
 
 using wolfen::engine::Version;
 using wolfen::engine::render::Backend;
@@ -176,4 +177,24 @@ TEST_CASE("Unknown options, including the --option=value form", "[options]") {
 TEST_CASE("Only the first error, reading left to right, is printed", "[options]") {
     FakeGraphicsSystem graphics;
     requireOptionError(graphics, {"--bogus", "--renderer", "foo"}, "Unknown option '--bogus'");
+}
+
+TEST_CASE("A chosen renderer that fails to start: its own message, exit 1, window closed",
+          "[options][renderer][startup]") {
+    FakeGraphicsSystem graphics;
+    graphics.rendererFailure = "the device could not be created";
+    const LauncherRun run{graphics, {"--renderer", "vulkan"}};
+    REQUIRE(run.out() == versionLine()); // the start line comes before the failure
+    REQUIRE(run.err() == "Renderer 'vulkan' could not be started on this computer.\n");
+    REQUIRE(graphics.record.steps ==
+            std::vector<std::string>{"open window", "start renderer", "close window"});
+    REQUIRE(run.exitCode() == 1);
+}
+
+TEST_CASE("A start failure exits with 1", "[options][startup]") {
+    FakeGraphicsSystem graphics;
+    graphics.windowFailure = "no display available";
+    const LauncherRun run{graphics, {}};
+    REQUIRE(run.err() == "Wolfen could not start: no display available\n");
+    REQUIRE(run.exitCode() == 1);
 }

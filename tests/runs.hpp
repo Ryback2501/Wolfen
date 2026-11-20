@@ -15,12 +15,9 @@
 
 namespace wolfen::tests {
 
-// What one run printed on its two output streams, and the exit code it ended with.
+// What one run printed on its two output streams.
 class RunOutput {
   public:
-    [[nodiscard]] int exitCode() const {
-        return exitCode_;
-    }
     [[nodiscard]] std::string out() const {
         return out_.str();
     }
@@ -29,43 +26,58 @@ class RunOutput {
     }
 
   protected:
-    // Runs `run` once, giving it the two streams to print to; `run` returns the exit code.
-    template <typename Run> explicit RunOutput(const Run& run) : exitCode_{run(out_, err_)} {}
+    RunOutput() = default;
+
+    // The streams the run prints to.
+    [[nodiscard]] std::ostringstream& outStream() {
+        return out_;
+    }
+    [[nodiscard]] std::ostringstream& errStream() {
+        return err_;
+    }
 
   private:
     std::ostringstream out_;
     std::ostringstream err_;
-    int exitCode_; // declared after the streams, so they exist when the run starts
 };
 
 // Runs the game once with the given fake graphics system, and records what the game had printed
 // when it opened the window.
 class GameRun final : public RunOutput {
   public:
-    explicit GameRun(FakeGraphicsSystem& graphics)
-        : RunOutput{[&graphics](std::ostringstream& out, std::ostringstream& err) {
-              graphics.watchedOutput = &out;
-              game::Game game{out, err, graphics};
-              return game.run();
-          }} {}
+    explicit GameRun(FakeGraphicsSystem& graphics) : outcome_{watchedGame(graphics).run()} {}
     // Runs it with the given renderer choice, already checked by the launcher.
     GameRun(FakeGraphicsSystem& graphics, std::optional<engine::render::Backend> backend)
-        : RunOutput{[&graphics, backend](std::ostringstream& out, std::ostringstream& err) {
-              graphics.watchedOutput = &out;
-              game::Game game{out, err, graphics};
-              return game.run(backend);
-          }} {}
+        : outcome_{watchedGame(graphics).run(backend)} {}
+
+    [[nodiscard]] game::Game::Outcome outcome() const {
+        return outcome_;
+    }
+
+  private:
+    // A game printing to this run's streams; the graphics system records what it had printed
+    // when the window opened.
+    game::Game watchedGame(FakeGraphicsSystem& graphics) {
+        graphics.watchedOutput = &outStream();
+        return game::Game{outStream(), errStream(), graphics};
+    }
+
+    game::Game::Outcome outcome_;
 };
 
 // Runs the launcher once with the given start options and fake graphics system.
 class LauncherRun final : public RunOutput {
   public:
     LauncherRun(FakeGraphicsSystem& graphics, std::initializer_list<std::string_view> args)
-        : RunOutput{[&graphics, args](std::ostringstream& out, std::ostringstream& err) {
-              const std::vector<std::string_view> words{args};
-              game::Launcher launcher{out, err, graphics};
-              return launcher.run(words);
-          }} {}
+        : exitCode_{game::Launcher{outStream(), errStream(), graphics}.run(
+              std::vector<std::string_view>{args})} {}
+
+    [[nodiscard]] int exitCode() const {
+        return exitCode_;
+    }
+
+  private:
+    int exitCode_;
 };
 
 } // namespace wolfen::tests
