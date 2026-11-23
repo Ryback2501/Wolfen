@@ -1,15 +1,19 @@
 #include "fake_graphics.hpp"
 #include "launcher.hpp"
+#include "platform/window.hpp"
 #include "render/backend.hpp"
 #include "runs.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
 #include <initializer_list>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
 
+using wolfen::engine::platform::WindowEvent;
+using wolfen::engine::platform::WindowMode;
 using wolfen::engine::render::Backend;
 using wolfen::tests::FakeGraphicsSystem;
 using wolfen::tests::LauncherRun;
@@ -17,7 +21,8 @@ using wolfen::tests::versionLine;
 
 namespace {
 
-// The usage text approved for #3, with the given list of available renderers.
+// The usage text approved for #3, as changed by #4 (the --fullscreen line, and no keys), with the
+// given list of available renderers.
 std::string usage(std::string_view available) {
     return "Usage: wolfen [options]\n"
            "\n"
@@ -25,10 +30,9 @@ std::string usage(std::string_view available) {
            "  --renderer <name>  Draw with this renderer. Available on this computer: " +
            std::string{available} +
            "\n"
+           "  --fullscreen       Start in borderless fullscreen.\n"
            "  --help             Show this help and exit.\n"
-           "  --version          Show the version and exit.\n"
-           "\n"
-           "While the game runs, press Esc to quit.\n";
+           "  --version          Show the version and exit.\n";
 }
 
 const std::string usageHere = usage("vulkan, opengl"); // the fake's default available renderers
@@ -44,6 +48,18 @@ void requireOptionError(FakeGraphicsSystem& graphics, std::initializer_list<std:
     REQUIRE(run.out().empty());
     REQUIRE(graphics.record.steps.empty());
     REQUIRE(run.exitCode() == 1);
+}
+
+// A start in fullscreen with the given renderer choice: the start line, no error, exit 0.
+void requireFullscreenStart(std::initializer_list<std::string_view> args,
+                            std::optional<Backend> backend) {
+    FakeGraphicsSystem graphics;
+    const LauncherRun run{graphics, args};
+    REQUIRE(run.out() == versionLine());
+    REQUIRE(run.err().empty());
+    REQUIRE(graphics.record.windowSettings.mode == WindowMode::Fullscreen);
+    REQUIRE(graphics.record.requestedBackend == backend);
+    REQUIRE(run.exitCode() == 0);
 }
 
 } // namespace
@@ -212,4 +228,49 @@ TEST_CASE("Words as the system gives them: 'wolfen' alone plays with no renderer
     REQUIRE(graphics.record.steps.front() == "open window");
     REQUIRE_FALSE(graphics.record.requestedBackend.has_value());
     REQUIRE(run.exitCode() == 0);
+}
+
+TEST_CASE("The usage lists --fullscreen right after --renderer, and mentions no keys",
+          "[options][help][fullscreen]") {
+    FakeGraphicsSystem graphics;
+    const std::string out = LauncherRun{graphics, {"--help"}}.out();
+    REQUIRE(out == usageHere);
+    REQUIRE(out.find("F11") == std::string::npos);
+    REQUIRE(out.find("Esc") == std::string::npos);
+}
+
+TEST_CASE("The --fullscreen option starts the game fullscreen, in any order with --renderer",
+          "[options][fullscreen]") {
+    requireFullscreenStart({"--fullscreen"}, std::nullopt);
+    requireFullscreenStart({"--fullscreen", "--renderer", "opengl"}, Backend::OpenGL);
+    requireFullscreenStart({"--renderer", "opengl", "--fullscreen"}, Backend::OpenGL);
+}
+
+TEST_CASE("Without --fullscreen the game starts in a window", "[options][fullscreen]") {
+    for (const auto args : {std::initializer_list<std::string_view>{},
+                            std::initializer_list<std::string_view>{"--renderer", "vulkan"}}) {
+        FakeGraphicsSystem graphics;
+        const LauncherRun run{graphics, args};
+        REQUIRE(graphics.record.windowSettings.mode == WindowMode::Windowed);
+        REQUIRE(run.exitCode() == 0);
+    }
+}
+
+TEST_CASE("In fullscreen, Esc quits with exit code 0", "[options][fullscreen]") {
+    FakeGraphicsSystem graphics;
+    graphics.events = {{}, {WindowEvent::EscapePressed}};
+    const LauncherRun run{graphics, {"--fullscreen"}};
+    REQUIRE(graphics.record.windowSettings.mode == WindowMode::Fullscreen);
+    REQUIRE(graphics.record.frames.size() == 1);
+    REQUIRE(run.exitCode() == 0);
+}
+
+TEST_CASE("The --fullscreen option given twice", "[options][fullscreen]") {
+    FakeGraphicsSystem graphics;
+    requireOptionError(graphics, {"--fullscreen", "--fullscreen"},
+                       "Option '--fullscreen' given twice");
+    // Only the first error, reading left to right, is printed.
+    FakeGraphicsSystem thenUnknown;
+    requireOptionError(thenUnknown, {"--fullscreen", "--fullscreen", "--bogus"},
+                       "Option '--fullscreen' given twice");
 }

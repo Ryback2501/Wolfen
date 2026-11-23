@@ -15,6 +15,7 @@ using wolfen::engine::Colour;
 using wolfen::engine::Size;
 using wolfen::engine::Version;
 using wolfen::engine::platform::WindowEvent;
+using wolfen::engine::platform::WindowMode;
 using wolfen::engine::render::Backend;
 using wolfen::engine::render::RendererName;
 using wolfen::game::Game;
@@ -176,4 +177,57 @@ TEST_CASE("A given renderer that fails to start: reported, nothing printed, wind
     REQUIRE(run.err().empty());
     REQUIRE(graphics.record.steps ==
             std::vector<std::string>{"open window", "start renderer", "close window"});
+}
+
+TEST_CASE("Given no window mode, the game opens a window, not fullscreen", "[game][fullscreen]") {
+    FakeGraphicsSystem graphics;
+    const GameRun run{graphics};
+    REQUIRE(graphics.record.windowSettings.mode == WindowMode::Windowed);
+}
+
+TEST_CASE("Asked for fullscreen, the game opens its window fullscreen, 1280x720 for later",
+          "[game][fullscreen]") {
+    for (const auto backend : {std::optional<Backend>{}, std::optional<Backend>{Backend::OpenGL}}) {
+        FakeGraphicsSystem graphics;
+        const GameRun run{graphics, backend, WindowMode::Fullscreen};
+        const auto& settings = graphics.record.windowSettings;
+        REQUIRE(settings.mode == WindowMode::Fullscreen);
+        // The size the window gets when it first leaves fullscreen.
+        REQUIRE(settings.size == Size{.width = 1280, .height = 720});
+        REQUIRE(graphics.record.requestedBackend == backend);
+        REQUIRE(run.outcome() == Game::Outcome::Ended);
+    }
+}
+
+TEST_CASE("Each F11 press switches fullscreen once, and the game keeps drawing",
+          "[game][fullscreen]") {
+    FakeGraphicsSystem graphics;
+    graphics.events = {
+        {WindowEvent::FullscreenKeyPressed}, {}, {WindowEvent::FullscreenKeyPressed}, {}};
+    const GameRun run{graphics};
+    REQUIRE(graphics.record.fullscreenSwitches == 2);
+    REQUIRE(graphics.record.frames.size() == 4);
+    REQUIRE(run.outcome() == Game::Outcome::Ended);
+}
+
+TEST_CASE("Switching fullscreen keeps the title with the renderer's name", "[game][fullscreen]") {
+    FakeGraphicsSystem graphics;
+    graphics.rendererName = "OpenGL";
+    graphics.events = {{WindowEvent::FullscreenKeyPressed}, {}};
+    const GameRun run{graphics, Backend::OpenGL, WindowMode::Fullscreen};
+    REQUIRE(graphics.record.fullscreenSwitches == 1);
+    REQUIRE(
+        graphics.record.titles ==
+        std::vector<std::string>{"Wolfen " + std::string{Version::current().text()} + " (OpenGL)"});
+}
+
+TEST_CASE("In fullscreen, Esc and the close button still end the game", "[game][fullscreen]") {
+    for (const auto quit : {WindowEvent::EscapePressed, WindowEvent::CloseRequested}) {
+        FakeGraphicsSystem graphics;
+        graphics.events = {{}, {quit}, {}};
+        const GameRun run{graphics, std::nullopt, WindowMode::Fullscreen};
+        REQUIRE(graphics.record.windowSettings.mode == WindowMode::Fullscreen);
+        REQUIRE(graphics.record.frames.size() == 1);
+        REQUIRE(run.outcome() == Game::Outcome::Ended);
+    }
 }

@@ -5,6 +5,7 @@
 #include "fake_graphics.hpp"
 #include "game.hpp"
 #include "launcher.hpp"
+#include "platform/window.hpp"
 #include "render/backend.hpp"
 
 #include <initializer_list>
@@ -52,9 +53,11 @@ class RunOutput {
 class GameRun final : public RunOutput {
   public:
     explicit GameRun(FakeGraphicsSystem& graphics) : outcome_{watchedGame(graphics).run()} {}
-    // Runs it with the given renderer choice, already checked by the launcher, in a window.
-    GameRun(FakeGraphicsSystem& graphics, std::optional<engine::render::Backend> backend)
-        : outcome_{watchedGame(graphics).run(backend, engine::platform::WindowMode::Windowed)} {}
+    // Runs it with the given renderer choice, already checked by the launcher, in the given
+    // window mode.
+    GameRun(FakeGraphicsSystem& graphics, std::optional<engine::render::Backend> backend,
+            engine::platform::WindowMode windowMode = engine::platform::WindowMode::Windowed)
+        : outcome_{watchedGame(graphics).run(backend, windowMode)} {}
 
     [[nodiscard]] game::Game::Outcome outcome() const {
         return outcome_;
