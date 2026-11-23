@@ -55,10 +55,22 @@ constexpr std::array<OptionRow, 4> options{{
      .help = "Show the version and exit."},
 }};
 
+// Whether the option takes a value (the word after it).
+constexpr bool takesValue(const OptionRow& row) {
+    return !row.valueShown.empty();
+}
+
+// An option that takes a value names it both in the usage and in its error.
+static_assert(std::ranges::all_of(options,
+                                  [](const OptionRow& row) {
+                                      return takesValue(row) == !row.valueNeeded.empty();
+                                  }),
+              "an option's value is described both for the usage and for its error, or not at all");
+
 // An option as the usage shows it: its name, then its value if it takes one.
 std::string shownOption(const OptionRow& row) {
-    return row.valueShown.empty() ? std::string{row.name}
-                                  : std::string{row.name} + " " + std::string{row.valueShown};
+    return takesValue(row) ? std::string{row.name} + " " + std::string{row.valueShown}
+                           : std::string{row.name};
 }
 
 struct NamedRenderer {
@@ -77,7 +89,7 @@ constexpr std::array<NamedRenderer, 5> knownRenderers{
 // The first row of the table that `matches` accepts, or null. A plain loop returning a pointer, so
 // the code does not depend on whether the library's array iterators are pointers.
 template <typename Row, std::size_t rowCount, typename Matches>
-const Row* firstRow(const std::array<Row, rowCount>& table, const Matches& matches) {
+constexpr const Row* firstRow(const std::array<Row, rowCount>& table, const Matches& matches) {
     for (const Row& row : table) {
         if (matches(row)) {
             return &row;
@@ -85,6 +97,11 @@ const Row* firstRow(const std::array<Row, rowCount>& table, const Matches& match
     }
     return nullptr;
 }
+
+// The help option's row: the hint line after an error names it. Worked out while compiling: without
+// a help row there is nothing to follow, and the build fails here.
+constexpr const OptionRow& helpRow =
+    *firstRow(options, [](const OptionRow& row) { return row.option == Option::Help; });
 
 // Whether the list holds the item.
 template <typename List>
@@ -112,6 +129,11 @@ CommandLine::CommandLine(std::span<const std::string_view> args,
     // option, then the version option, win over everything else wherever they are.
     std::optional<Action> action;
     std::vector<Option> seen;
+    // Whether a value follows the word at `at`. A word starting with '-' is never a value: it is
+    // read as an option of its own.
+    const auto valueFollows = [args](std::size_t at) {
+        return at + 1 < args.size() && !args[at + 1].starts_with('-');
+    };
     for (std::size_t i = 0; i < args.size(); ++i) {
         const std::string_view word = args[i];
         const OptionRow* row = firstRow(
@@ -122,14 +144,16 @@ CommandLine::CommandLine(std::span<const std::string_view> args,
         }
         if (contains(seen, row->option)) {
             fail("Option '" + std::string{word} + "' given twice");
+            if (takesValue(*row) && valueFollows(i)) {
+                ++i; // its value is not an option of its own
+            }
             continue;
         }
         seen.push_back(row->option);
 
         std::string_view value;
-        if (!row->valueShown.empty()) {
-            // A word starting with '-' is never a value: it is read as an option of its own.
-            if (i + 1 == args.size() || args[i + 1].starts_with('-')) {
+        if (takesValue(*row)) {
+            if (!valueFollows(i)) {
                 fail("Option '" + std::string{word} + "' needs " + std::string{row->valueNeeded});
                 continue;
             }
@@ -217,9 +241,7 @@ std::string CommandLine::usage(std::span<const Backend> available) {
 }
 
 std::string CommandLine::hint() {
-    const OptionRow* helpRow =
-        firstRow(options, [](const OptionRow& row) { return row.option == Option::Help; });
-    return "Run 'wolfen " + std::string{helpRow->name} + "' to see the available options.";
+    return "Run 'wolfen " + std::string{helpRow.name} + "' to see the available options.";
 }
 
 std::string_view CommandLine::optionName(Backend backend) {
