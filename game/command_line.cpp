@@ -55,6 +55,12 @@ constexpr std::array<OptionRow, 4> options{{
      .help = "Show the version and exit."},
 }};
 
+// An option as the usage shows it: its name, then its value if it takes one ("--renderer <name>").
+std::string shownOption(const OptionRow& row) {
+    return row.valueShown.empty() ? std::string{row.name}
+                                  : std::string{row.name} + " " + std::string{row.valueShown};
+}
+
 struct NamedRenderer {
     std::string_view name;
     Backend backend;
@@ -190,15 +196,24 @@ const std::string& CommandLine::error() const {
 }
 
 std::string CommandLine::usage(std::span<const Backend> available) {
-    return "Usage: wolfen [options]\n"
-           "\n"
-           "Options:\n"
-           "  --renderer <name>  Draw with this renderer. Available on this computer: " +
-           availableList(available) +
-           "\n"
-           "  --fullscreen       Start in borderless fullscreen.\n"
-           "  --help             Show this help and exit.\n"
-           "  --version          Show the version and exit.\n";
+    // The help lines start two spaces after the longest option as shown.
+    std::size_t helpColumn = 0;
+    for (const OptionRow& row : options) {
+        helpColumn = std::max(helpColumn, shownOption(row).size() + 2);
+    }
+
+    std::string text = "Usage: wolfen [options]\n"
+                       "\n"
+                       "Options:\n";
+    for (const OptionRow& row : options) {
+        const std::string shown = shownOption(row);
+        text += "  " + shown + std::string(helpColumn - shown.size(), ' ') + std::string{row.help};
+        if (row.option == Option::Renderer) {
+            text += " " + availableList(available);
+        }
+        text += '\n';
+    }
+    return text;
 }
 
 std::string_view CommandLine::hint() {
