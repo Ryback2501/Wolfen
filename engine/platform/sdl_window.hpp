@@ -3,6 +3,8 @@
 
 #include "platform/window.hpp"
 
+#include <optional>
+
 struct SDL_Window;
 
 namespace wolfen::engine::platform {
@@ -27,7 +29,25 @@ class SdlWindow final : public Window {
     [[nodiscard]] NativeWindow nativeWindow() const override;
 
   private:
+    // Where a window was, and how big, before it went fullscreen.
+    struct WindowedPlacement {
+        int x{};
+        int y{};
+        Size size;
+        bool isMaximized{};
+    };
+
+    // Saves where the window is, then covers the screen that holds its centre.
+    void enterFullscreen();
+    // Back to a window, where and how big it was before (where the system allows).
+    void leaveFullscreen();
+
     SDL_Window* window_{};
+    // The window's size when it leaves fullscreen and has never been a window before (it started
+    // in fullscreen).
+    Size firstWindowedSize_;
+    // Saved each time the window goes fullscreen; empty until then.
+    std::optional<WindowedPlacement> windowedPlacement_;
 };
 
 } // namespace wolfen::engine::platform
