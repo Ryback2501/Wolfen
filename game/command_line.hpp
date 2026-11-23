@@ -38,7 +38,10 @@ class CommandLine {
     [[nodiscard]] static std::string_view optionName(engine::render::Backend backend);
 
   private:
-    // Records the error to report.
+    // Reads the value of --renderer: the renderer it names, if Wolfen knows it and this computer
+    // supports it; otherwise records the error.
+    void readRenderer(std::string_view name, std::span<const engine::render::Backend> available);
+    // Records the error to report, unless an earlier one is already recorded.
     void fail(std::string message);
 
     Action action_{Action::Run};
