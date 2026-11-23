@@ -24,8 +24,14 @@ void addWindowEvent(const SDL_Event& event, std::vector<WindowEvent>& events) {
         events.push_back(WindowEvent::CloseRequested);
         break;
     case SDL_EVENT_KEY_DOWN:
-        if (event.key.key == SDLK_ESCAPE && !event.key.repeat) {
+        // A key held down repeats; only the first press counts.
+        if (event.key.repeat) {
+            break;
+        }
+        if (event.key.key == SDLK_ESCAPE) {
             events.push_back(WindowEvent::EscapePressed);
+        } else if (event.key.key == SDLK_F11) {
+            events.push_back(WindowEvent::FullscreenKeyPressed);
         }
         break;
     case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
@@ -50,6 +56,9 @@ void addWindowEvent(const SDL_Event& event, std::vector<WindowEvent>& events) {
 } // namespace
 
 SdlWindow::SdlWindow(const WindowSettings& settings) {
+    if (settings.mode == WindowMode::Fullscreen) {
+        firstWindowedSize_ = settings.size;
+    }
 #ifdef __linux__
     // Wayland first, X11 as the fallback. On a Wayland desktop the X11 route (through XWayland)
     // crashes bgfx's OpenGL renderer: EGL has to guess the display type and guesses Wayland.
@@ -70,6 +79,11 @@ SdlWindow::SdlWindow(const WindowSettings& settings) {
     SDL_SetBooleanProperty(properties, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN,
                            settings.resizable);
     SDL_SetBooleanProperty(properties, SDL_PROP_WINDOW_CREATE_HIGH_PIXEL_DENSITY_BOOLEAN, true);
+    // Fullscreen covers the screen that holds the window's centre: the primary one, as the window
+    // is centred there. No fullscreen mode is ever set, so it is borderless at the screen's own
+    // resolution and the screen's mode never changes.
+    SDL_SetBooleanProperty(properties, SDL_PROP_WINDOW_CREATE_FULLSCREEN_BOOLEAN,
+                           settings.mode == WindowMode::Fullscreen);
     window_ = SDL_CreateWindowWithProperties(properties);
     SDL_DestroyProperties(properties);
 
@@ -89,6 +103,10 @@ std::vector<WindowEvent> SdlWindow::pollEvents() {
     std::vector<WindowEvent> events;
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
+        if (event.type == SDL_EVENT_WINDOW_LEAVE_FULLSCREEN) {
+            firstWindowedSize_.reset();
+            windowedPlacement_.reset();
+        }
         addWindowEvent(event, events);
     }
     return events;
@@ -109,6 +127,51 @@ Size SdlWindow::pixelSize() const {
 
 void SdlWindow::setTitle(std::string_view title) {
     SDL_SetWindowTitle(window_, std::string{title}.c_str());
+}
+
+void SdlWindow::switchFullscreen() {
+    if ((SDL_GetWindowFlags(window_) & SDL_WINDOW_FULLSCREEN) != 0) {
+        leaveFullscreen();
+    } else {
+        enterFullscreen();
+    }
+}
+
+void SdlWindow::enterFullscreen() {
+    WindowedPlacement placement;
+    SDL_GetWindowPosition(window_, &placement.x, &placement.y);
+    SDL_GetWindowSize(window_, &placement.size.width, &placement.size.height);
+    placement.isMaximized = (SDL_GetWindowFlags(window_) & SDL_WINDOW_MAXIMIZED) != 0;
+    windowedPlacement_ = placement;
+
+    // Borderless, on the screen that holds the window's centre (see the constructor).
+    SDL_SetWindowFullscreen(window_, true);
+    // Some systems switch a moment later; waiting keeps the window's state up to date for the next
+    // switch.
+    SDL_SyncWindow(window_);
+}
+
+void SdlWindow::leaveFullscreen() {
+    const SDL_DisplayID screen = SDL_GetDisplayForWindow(window_);
+    SDL_SetWindowFullscreen(window_, false);
+    // Wait until the window has left fullscreen, so the requests below apply to the window.
+    SDL_SyncWindow(window_);
+
+    // The system may ignore a position (Wayland always does): nothing is reported or retried.
+    if (windowedPlacement_) {
+        if (windowedPlacement_->isMaximized) {
+            SDL_MaximizeWindow(window_);
+        } else {
+            SDL_SetWindowSize(window_, windowedPlacement_->size.width,
+                              windowedPlacement_->size.height);
+            SDL_SetWindowPosition(window_, windowedPlacement_->x, windowedPlacement_->y);
+        }
+    } else if (firstWindowedSize_) {
+        const auto centred = static_cast<int>(SDL_WINDOWPOS_CENTERED_DISPLAY(screen));
+        SDL_SetWindowSize(window_, firstWindowedSize_->width, firstWindowedSize_->height);
+        SDL_SetWindowPosition(window_, centred, centred);
+    }
+    SDL_SyncWindow(window_);
 }
 
 NativeWindow SdlWindow::nativeWindow() const {
