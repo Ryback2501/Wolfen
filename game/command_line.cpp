@@ -55,7 +55,7 @@ constexpr std::array<OptionRow, 4> options{{
      .help = "Show the version and exit."},
 }};
 
-// An option as the usage shows it: its name, then its value if it takes one ("--renderer <name>").
+// An option as the usage shows it: its name, then its value if it takes one.
 std::string shownOption(const OptionRow& row) {
     return row.valueShown.empty() ? std::string{row.name}
                                   : std::string{row.name} + " " + std::string{row.valueShown};
@@ -108,9 +108,9 @@ std::string availableList(std::span<const Backend> available) {
 
 CommandLine::CommandLine(std::span<const std::string_view> args,
                          std::span<const Backend> available) {
-    // Every word is read, and only the first error, reading left to right, is kept: --help, then
-    // --version, win over everything else wherever they are.
-    std::optional<Action> answer;
+    // Every word is read, and only the first error, reading left to right, is kept. The help
+    // option, then the version option, win over everything else wherever they are.
+    std::optional<Action> action;
     std::vector<Option> seen;
     for (std::size_t i = 0; i < args.size(); ++i) {
         const std::string_view word = args[i];
@@ -144,16 +144,16 @@ CommandLine::CommandLine(std::span<const std::string_view> args,
             windowMode_ = WindowMode::Fullscreen;
             break;
         case Option::Help:
-            answer = Action::Help;
+            action = Action::Help;
             break;
         case Option::Version:
-            answer = answer.value_or(Action::Version); // --help still wins
+            action = action.value_or(Action::Version); // the help option still wins
             break;
         }
     }
 
-    if (answer) {
-        action_ = *answer;
+    if (action) {
+        action_ = *action;
     } else if (!error_.empty()) {
         action_ = Action::Error;
     }
@@ -217,9 +217,9 @@ std::string CommandLine::usage(std::span<const Backend> available) {
 }
 
 std::string CommandLine::hint() {
-    const OptionRow* help =
+    const OptionRow* helpRow =
         firstRow(options, [](const OptionRow& row) { return row.option == Option::Help; });
-    return "Run 'wolfen " + std::string{help->name} + "' to see the available options.";
+    return "Run 'wolfen " + std::string{helpRow->name} + "' to see the available options.";
 }
 
 std::string_view CommandLine::optionName(Backend backend) {
