@@ -216,8 +216,10 @@ std::string CommandLine::usage(std::span<const Backend> available) {
     return text;
 }
 
-std::string_view CommandLine::hint() {
-    return "Run 'wolfen --help' to see the available options.";
+std::string CommandLine::hint() {
+    const OptionRow* help =
+        firstRow(options, [](const OptionRow& row) { return row.option == Option::Help; });
+    return "Run 'wolfen " + std::string{help->name} + "' to see the available options.";
 }
 
 std::string_view CommandLine::optionName(Backend backend) {
