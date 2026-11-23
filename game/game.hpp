@@ -2,6 +2,7 @@
 #define WOLFEN_GAME_GAME_HPP
 
 #include "app/graphics_system.hpp"
+#include "platform/window.hpp"
 
 #include <cstdint>
 #include <iosfwd>

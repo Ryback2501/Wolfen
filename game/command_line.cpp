@@ -57,7 +57,7 @@ std::string availableList(std::span<const Backend> available) {
 }
 
 // The error for an option given more than once.
-std::string givenTwice(std::string_view option) {
+std::string givenTwiceError(std::string_view option) {
     return "Option '" + std::string{option} + "' given twice";
 }
 
@@ -81,7 +81,7 @@ CommandLine::CommandLine(std::span<const std::string_view> args,
         const std::string_view word = args[i];
         if (word == "--fullscreen") {
             if (windowMode_ == WindowMode::Fullscreen) {
-                fail(givenTwice(word));
+                fail(givenTwiceError(word));
                 return;
             }
             windowMode_ = WindowMode::Fullscreen;
@@ -92,7 +92,7 @@ CommandLine::CommandLine(std::span<const std::string_view> args,
             return;
         }
         if (rendererSeen) {
-            fail(givenTwice(word));
+            fail(givenTwiceError(word));
             return;
         }
         rendererSeen = true;
