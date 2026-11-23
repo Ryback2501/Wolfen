@@ -1,6 +1,7 @@
 #ifndef WOLFEN_GAME_COMMAND_LINE_HPP
 #define WOLFEN_GAME_COMMAND_LINE_HPP
 
+#include "platform/window.hpp"
 #include "render/backend.hpp"
 
 #include <cstdint>
@@ -24,6 +25,8 @@ class CommandLine {
     [[nodiscard]] Action action() const;
     // For Run: the renderer asked for with --renderer, if any.
     [[nodiscard]] std::optional<engine::render::Backend> backend() const;
+    // For Run: Fullscreen when --fullscreen was given, Windowed otherwise.
+    [[nodiscard]] engine::platform::WindowMode windowMode() const;
     // For Error: the message to show, without the usage.
     [[nodiscard]] const std::string& error() const;
 
@@ -40,6 +43,7 @@ class CommandLine {
 
     Action action_{Action::Run};
     std::optional<engine::render::Backend> backend_;
+    engine::platform::WindowMode windowMode_{engine::platform::WindowMode::Windowed};
     std::string error_;
 };
 

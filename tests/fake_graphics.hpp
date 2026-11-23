@@ -25,6 +25,7 @@ struct GraphicsRecord {
     std::vector<engine::Size> resizes;
     std::optional<engine::render::Backend> requestedBackend; // as asked of the last startRenderer()
     int waits{};                        // how many times the game slept until the window had events
+    int fullscreenSwitches{};           // how many times the game switched fullscreen on or off
     std::string outputWhenWindowOpened; // what the game had printed when it opened the window
 };
 
@@ -67,6 +68,9 @@ class FakeWindow final : public engine::platform::Window {
     }
     void setTitle(std::string_view title) override {
         record_->titles.emplace_back(title);
+    }
+    void switchFullscreen() override {
+        ++record_->fullscreenSwitches;
     }
     [[nodiscard]] engine::platform::NativeWindow nativeWindow() const override {
         return {};

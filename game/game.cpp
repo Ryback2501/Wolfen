@@ -26,10 +26,11 @@ std::string Game::name() {
 }
 
 Game::Outcome Game::run() {
-    return run(std::nullopt);
+    return run(std::nullopt, engine::platform::WindowMode::Windowed);
 }
 
-Game::Outcome Game::run(std::optional<engine::render::Backend> backend) {
+Game::Outcome Game::run(std::optional<engine::render::Backend> backend,
+                        engine::platform::WindowMode /*windowMode*/) {
     const std::string title = name();
     *out_ << title << '\n' << std::flush; // flushed, so it shows before the window opens
     try {
@@ -73,6 +74,8 @@ void Game::play(engine::platform::Window& window, engine::render::Renderer& rend
                 break;
             case engine::platform::WindowEvent::Shown:
                 visible = true;
+                break;
+            case engine::platform::WindowEvent::FullscreenKeyPressed:
                 break;
             }
         }

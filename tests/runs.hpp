@@ -52,9 +52,9 @@ class RunOutput {
 class GameRun final : public RunOutput {
   public:
     explicit GameRun(FakeGraphicsSystem& graphics) : outcome_{watchedGame(graphics).run()} {}
-    // Runs it with the given renderer choice, already checked by the launcher.
+    // Runs it with the given renderer choice, already checked by the launcher, in a window.
     GameRun(FakeGraphicsSystem& graphics, std::optional<engine::render::Backend> backend)
-        : outcome_{watchedGame(graphics).run(backend)} {}
+        : outcome_{watchedGame(graphics).run(backend, engine::platform::WindowMode::Windowed)} {}
 
     [[nodiscard]] game::Game::Outcome outcome() const {
         return outcome_;

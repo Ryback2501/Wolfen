@@ -28,9 +28,11 @@ class Game {
     [[nodiscard]] static std::string name();
 
     // Runs the game with the given renderer, or the best one for this computer when none is given,
-    // until it ends; returns how it ended. The window is closed by then.
-    Outcome run(std::optional<engine::render::Backend> backend);
-    // Runs the game with the best renderer for this computer.
+    // in a window or in fullscreen, until it ends; returns how it ended. The window is closed by
+    // then.
+    Outcome run(std::optional<engine::render::Backend> backend,
+                engine::platform::WindowMode windowMode);
+    // Runs the game in a window, with the best renderer for this computer.
     Outcome run();
 
   private:

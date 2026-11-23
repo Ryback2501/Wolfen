@@ -114,6 +114,10 @@ std::optional<Backend> CommandLine::backend() const {
     return backend_;
 }
 
+engine::platform::WindowMode CommandLine::windowMode() const {
+    return windowMode_;
+}
+
 const std::string& CommandLine::error() const {
     return error_;
 }

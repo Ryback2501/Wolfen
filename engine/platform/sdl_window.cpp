@@ -111,6 +111,8 @@ void SdlWindow::setTitle(std::string_view title) {
     SDL_SetWindowTitle(window_, std::string{title}.c_str());
 }
 
+void SdlWindow::switchFullscreen() {}
+
 NativeWindow SdlWindow::nativeWindow() const {
     const SDL_PropertiesID properties = SDL_GetWindowProperties(window_);
 #ifdef _WIN32
