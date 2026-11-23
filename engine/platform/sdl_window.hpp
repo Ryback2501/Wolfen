@@ -43,11 +43,13 @@ class SdlWindow final : public Window {
     void leaveFullscreen();
 
     SDL_Window* window_{};
-    // The window's size when it leaves fullscreen and has never been a window before (it started
-    // in fullscreen).
-    Size firstWindowedSize_;
-    // Saved each time the window goes fullscreen; empty until then.
+    // For a window that opened in fullscreen: its size when it first leaves it.
+    std::optional<Size> firstWindowedSize_;
+    // Saved when F11 takes the window to fullscreen.
     std::optional<WindowedPlacement> windowedPlacement_;
+    // Both are forgotten whenever the window leaves fullscreen, by F11 or by the system (a title
+    // bar button, a system shortcut), so an old place is never used again. A window the system put
+    // in fullscreen is put back by SDL itself.
 };
 
 } // namespace wolfen::engine::platform

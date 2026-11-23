@@ -55,7 +55,10 @@ void addWindowEvent(const SDL_Event& event, std::vector<WindowEvent>& events) {
 
 } // namespace
 
-SdlWindow::SdlWindow(const WindowSettings& settings) : firstWindowedSize_{settings.size} {
+SdlWindow::SdlWindow(const WindowSettings& settings) {
+    if (settings.mode == WindowMode::Fullscreen) {
+        firstWindowedSize_ = settings.size;
+    }
 #ifdef __linux__
     // Wayland first, X11 as the fallback. On a Wayland desktop the X11 route (through XWayland)
     // crashes bgfx's OpenGL renderer: EGL has to guess the display type and guesses Wayland.
@@ -100,6 +103,10 @@ std::vector<WindowEvent> SdlWindow::pollEvents() {
     std::vector<WindowEvent> events;
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
+        if (event.type == SDL_EVENT_WINDOW_LEAVE_FULLSCREEN) {
+            firstWindowedSize_.reset();
+            windowedPlacement_.reset();
+        }
         addWindowEvent(event, events);
     }
     return events;
@@ -151,15 +158,18 @@ void SdlWindow::leaveFullscreen() {
     SDL_SyncWindow(window_);
 
     // The system may ignore a position (Wayland always does): nothing is reported or retried.
-    if (!windowedPlacement_) {
+    if (windowedPlacement_) {
+        if (windowedPlacement_->isMaximized) {
+            SDL_MaximizeWindow(window_);
+        } else {
+            SDL_SetWindowSize(window_, windowedPlacement_->size.width,
+                              windowedPlacement_->size.height);
+            SDL_SetWindowPosition(window_, windowedPlacement_->x, windowedPlacement_->y);
+        }
+    } else if (firstWindowedSize_) {
         const auto centred = static_cast<int>(SDL_WINDOWPOS_CENTERED_DISPLAY(screen));
-        SDL_SetWindowSize(window_, firstWindowedSize_.width, firstWindowedSize_.height);
+        SDL_SetWindowSize(window_, firstWindowedSize_->width, firstWindowedSize_->height);
         SDL_SetWindowPosition(window_, centred, centred);
-    } else if (windowedPlacement_->isMaximized) {
-        SDL_MaximizeWindow(window_);
-    } else {
-        SDL_SetWindowSize(window_, windowedPlacement_->size.width, windowedPlacement_->size.height);
-        SDL_SetWindowPosition(window_, windowedPlacement_->x, windowedPlacement_->y);
     }
     SDL_SyncWindow(window_);
 }

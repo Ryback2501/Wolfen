@@ -19,7 +19,7 @@ enum class WindowMode : std::uint8_t {
 // How a window is opened.
 struct WindowSettings {
     std::string title;
-    Size size; // in a window; also the size it gets when it leaves fullscreen the first time
+    Size size; // in a window; for Fullscreen, the size it gets when it first leaves fullscreen
     bool resizable{true};
     WindowMode mode{WindowMode::Windowed}; // Fullscreen opens on the primary screen
 };
@@ -61,7 +61,8 @@ class Window {
     [[nodiscard]] virtual Size pixelSize() const = 0;
     virtual void setTitle(std::string_view title) = 0;
     // Goes from a window to fullscreen on the screen that holds the window's centre, or from
-    // fullscreen back to a window with the size, position and maximized state it had before.
+    // fullscreen back to a window with the size, position and maximized state it had before. A
+    // window that opened in fullscreen goes back to its settings' size, centred on its screen.
     virtual void switchFullscreen() = 0;
     [[nodiscard]] virtual NativeWindow nativeWindow() const = 0;
 };
