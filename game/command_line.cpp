@@ -10,6 +10,7 @@ namespace wolfen::game {
 
 namespace {
 
+using engine::platform::WindowMode;
 using engine::render::Backend;
 
 struct NamedRenderer {
@@ -55,6 +56,11 @@ std::string availableList(std::span<const Backend> available) {
     return list.empty() ? "(none)" : list;
 }
 
+// The error for an option given more than once.
+std::string givenTwice(std::string_view option) {
+    return "Option '" + std::string{option} + "' given twice";
+}
+
 } // namespace
 
 CommandLine::CommandLine(std::span<const std::string_view> args,
@@ -73,12 +79,20 @@ CommandLine::CommandLine(std::span<const std::string_view> args,
     bool rendererSeen = false;
     for (std::size_t i = 0; i < args.size(); ++i) {
         const std::string_view word = args[i];
+        if (word == "--fullscreen") {
+            if (windowMode_ == WindowMode::Fullscreen) {
+                fail(givenTwice(word));
+                return;
+            }
+            windowMode_ = WindowMode::Fullscreen;
+            continue;
+        }
         if (word != "--renderer") {
             fail("Unknown option '" + std::string{word} + "'");
             return;
         }
         if (rendererSeen) {
-            fail("Option '--renderer' given twice");
+            fail(givenTwice(word));
             return;
         }
         rendererSeen = true;
@@ -114,7 +128,7 @@ std::optional<Backend> CommandLine::backend() const {
     return backend_;
 }
 
-engine::platform::WindowMode CommandLine::windowMode() const {
+WindowMode CommandLine::windowMode() const {
     return windowMode_;
 }
 
@@ -129,10 +143,9 @@ std::string CommandLine::usage(std::span<const Backend> available) {
            "  --renderer <name>  Draw with this renderer. Available on this computer: " +
            availableList(available) +
            "\n"
+           "  --fullscreen       Start in borderless fullscreen.\n"
            "  --help             Show this help and exit.\n"
-           "  --version          Show the version and exit.\n"
-           "\n"
-           "While the game runs, press Esc to quit.\n";
+           "  --version          Show the version and exit.\n";
 }
 
 std::string_view CommandLine::hint() {
