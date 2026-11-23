@@ -30,6 +30,12 @@ bgfx::RendererType::Enum bgfxTypeOf(Backend backend) {
     return row == nullptr ? bgfx::RendererType::Count : row->bgfxType;
 }
 
+// Makes the main view cover the whole window. bgfx works out a view's size only when it is set, so
+// this is needed again after every resize.
+void fitMainViewToWindow() {
+    bgfx::setViewRect(mainView, 0, 0, bgfx::BackbufferRatio::Equal);
+}
+
 // Sets the swap chain's width and height to a size in pixels.
 void setSwapChainSize(bgfx::SwapChain& swapChain, Size pixelSize) {
     swapChain.width = static_cast<std::uint32_t>(pixelSize.width);
@@ -97,7 +103,7 @@ BgfxRenderer::BgfxRenderer(const platform::Window& window, std::optional<Backend
     try {
         const bgfx::RendererType::Enum type = bgfx::getRendererType();
         name_ = RendererName::display(backendOf(type), bgfx::getRendererName(type));
-        bgfx::setViewRect(mainView, 0, 0, bgfx::BackbufferRatio::Equal);
+        fitMainViewToWindow();
     } catch (...) {
         bgfx::shutdown();
         throw;
@@ -116,6 +122,7 @@ void BgfxRenderer::resize(Size pixelSize) {
     bgfx::SwapChain swapChain;
     setSwapChainSize(swapChain, pixelSize);
     bgfx::reset(resetFlags, &swapChain);
+    fitMainViewToWindow();
 }
 
 void BgfxRenderer::drawFrame(Colour background) {
