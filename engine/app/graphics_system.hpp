@@ -33,6 +33,10 @@ class GraphicsSystem {
     // renderer must be destroyed before the window it draws into.
     virtual std::unique_ptr<render::Renderer>
     startRenderer(platform::Window& window, std::optional<render::Backend> backend) = 0;
+    // Starts the given renderer on a CPU device (a software rasterizer) and nowhere else. Throws
+    // StartupError when it cannot, including when it would start on a graphics card instead.
+    virtual std::unique_ptr<render::Renderer> startCpuRenderer(platform::Window& window,
+                                                               render::Backend backend) = 0;
 };
 
 } // namespace wolfen::engine::app

@@ -30,6 +30,7 @@ class BgfxRenderer final : public Renderer {
     ~BgfxRenderer() override;
 
     [[nodiscard]] std::string_view name() const override;
+    [[nodiscard]] bool drawsWithCpu() const override;
     void resize(Size pixelSize) override;
     void drawFrame(Colour background) override;
 

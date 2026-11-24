@@ -104,6 +104,9 @@ class FakeRenderer final : public engine::render::Renderer {
     [[nodiscard]] std::string_view name() const override {
         return name_;
     }
+    [[nodiscard]] bool drawsWithCpu() const override {
+        return false;
+    }
     void resize(engine::Size pixelSize) override {
         record_->resizes.push_back(pixelSize);
     }
@@ -159,6 +162,12 @@ class FakeGraphicsSystem final : public engine::app::GraphicsSystem {
             throw engine::StartupError{*rendererFailure};
         }
         return std::make_unique<FakeRenderer>(record, rendererName);
+    }
+
+    std::unique_ptr<engine::render::Renderer>
+    startCpuRenderer(engine::platform::Window& /*window*/,
+                     engine::render::Backend /*backend*/) override {
+        throw engine::StartupError{"no CPU device"};
     }
 };
 

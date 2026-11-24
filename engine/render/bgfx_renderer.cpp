@@ -118,6 +118,10 @@ std::string_view BgfxRenderer::name() const {
     return name_;
 }
 
+bool BgfxRenderer::drawsWithCpu() const {
+    return false;
+}
+
 void BgfxRenderer::resize(Size pixelSize) {
     bgfx::SwapChain swapChain;
     setSwapChainSize(swapChain, pixelSize);

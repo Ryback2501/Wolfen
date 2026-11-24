@@ -20,6 +20,9 @@ class Renderer {
 
     // The name to show people, for example "Vulkan" (see RendererName).
     [[nodiscard]] virtual std::string_view name() const = 0;
+    // Whether it draws on a CPU device (a software rasterizer) instead of a graphics card, as far
+    // as the rendering library can tell.
+    [[nodiscard]] virtual bool drawsWithCpu() const = 0;
     // The window's size in pixels changed.
     virtual void resize(Size pixelSize) = 0;
     // Draws one frame: the whole window in the background colour.
