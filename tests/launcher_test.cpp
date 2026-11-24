@@ -81,6 +81,46 @@ void requirePrimaryScreenThenSaved(const std::optional<std::string>& settingsTex
     REQUIRE(run.exitCode() == 0);
 }
 
+// A start with the given options in a window that ends with the given quit event: the screen the
+// window was on is saved in the game's folder, with no warning, exit 0.
+void requireScreenSavedOnQuit(WindowEvent quit, std::initializer_list<std::string_view> args) {
+    const TempFolder folder;
+    FakeGraphicsSystem graphics;
+    graphics.screenName = "HDMI-2";
+    graphics.events = {{}, {quit}};
+    const LauncherRun run{graphics, folder.path(), args};
+    REQUIRE(folder.text("settings.ini") == "screen=HDMI-2\n");
+    REQUIRE(run.err().empty());
+    REQUIRE(run.exitCode() == 0);
+}
+
+// A start with the given options and a saved screen: the window is asked for that screen.
+void requireOpensOnSavedScreen(std::initializer_list<std::string_view> args) {
+    const TempFolder folder;
+    folder.write("settings.ini", "screen=HDMI-2\n");
+    FakeGraphicsSystem graphics;
+    const LauncherRun run{graphics, folder.path(), args};
+    REQUIRE(graphics.record.windowSettings.screen == "HDMI-2");
+    REQUIRE(run.exitCode() == 0);
+}
+
+// Options that open no window, with a saved screen and with none: no window, the settings file is
+// not changed, and none is created.
+void requireSettingsLeftAlone(std::initializer_list<std::string_view> args) {
+    const TempFolder folder;
+    folder.write("settings.ini", "screen=HDMI-2\n");
+    FakeGraphicsSystem graphics;
+    graphics.screenName = "DP-1";
+    const LauncherRun run{graphics, folder.path(), args};
+    REQUIRE(graphics.record.steps.empty());
+    REQUIRE(folder.text("settings.ini") == "screen=HDMI-2\n");
+
+    const TempFolder noFile;
+    FakeGraphicsSystem again;
+    const LauncherRun runAgain{again, noFile.path(), args};
+    REQUIRE_FALSE(noFile.has("settings.ini"));
+}
+
 } // namespace
 
 TEST_CASE("The --help option prints the usage, opens no window and exits with 0",
@@ -298,30 +338,14 @@ TEST_CASE("A normal quit saves the screen the window was on in the game's folder
           "fullscreen",
           "[settings]") {
     for (const auto quit : {WindowEvent::CloseRequested, WindowEvent::EscapePressed}) {
-        for (const auto args : {std::initializer_list<std::string_view>{},
-                                std::initializer_list<std::string_view>{"--fullscreen"}}) {
-            const TempFolder folder;
-            FakeGraphicsSystem graphics;
-            graphics.screenName = "HDMI-2";
-            graphics.events = {{}, {quit}};
-            const LauncherRun run{graphics, folder.path(), args};
-            REQUIRE(folder.text("settings.ini") == "screen=HDMI-2\n");
-            REQUIRE(run.err().empty());
-            REQUIRE(run.exitCode() == 0);
-        }
+        requireScreenSavedOnQuit(quit, {});
+        requireScreenSavedOnQuit(quit, {"--fullscreen"});
     }
 }
 
 TEST_CASE("The game opens on the saved screen, in a window or fullscreen", "[settings]") {
-    for (const auto args : {std::initializer_list<std::string_view>{},
-                            std::initializer_list<std::string_view>{"--fullscreen"}}) {
-        const TempFolder folder;
-        folder.write("settings.ini", "screen=HDMI-2\n");
-        FakeGraphicsSystem graphics;
-        const LauncherRun run{graphics, folder.path(), args};
-        REQUIRE(graphics.record.windowSettings.screen == "HDMI-2");
-        REQUIRE(run.exitCode() == 0);
-    }
+    requireOpensOnSavedScreen({});
+    requireOpensOnSavedScreen({"--fullscreen"});
 }
 
 TEST_CASE("With no settings file, an empty or broken one, or no name, the game opens on the "
@@ -361,23 +385,10 @@ TEST_CASE("Fullscreen is not remembered: after quitting fullscreen, the next sta
 TEST_CASE("With --help, --version or a wrong option, no window opens and the settings file is "
           "left alone",
           "[settings][options]") {
-    for (const auto args : {std::initializer_list<std::string_view>{"--help"},
-                            std::initializer_list<std::string_view>{"--version"},
-                            std::initializer_list<std::string_view>{"--renderer", "nope"},
-                            std::initializer_list<std::string_view>{"--bogus"}}) {
-        const TempFolder folder;
-        folder.write("settings.ini", "screen=HDMI-2\n");
-        FakeGraphicsSystem graphics;
-        graphics.screenName = "DP-1";
-        const LauncherRun run{graphics, folder.path(), args};
-        REQUIRE(graphics.record.steps.empty());
-        REQUIRE(folder.text("settings.ini") == "screen=HDMI-2\n");
-
-        const TempFolder noFile;
-        FakeGraphicsSystem again;
-        const LauncherRun runAgain{again, noFile.path(), args};
-        REQUIRE_FALSE(noFile.has("settings.ini"));
-    }
+    requireSettingsLeftAlone({"--help"});
+    requireSettingsLeftAlone({"--version"});
+    requireSettingsLeftAlone({"--renderer", "nope"});
+    requireSettingsLeftAlone({"--bogus"});
 }
 
 TEST_CASE("A start that fails never writes the settings file", "[settings][startup]") {

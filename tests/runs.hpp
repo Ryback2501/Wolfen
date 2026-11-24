@@ -85,8 +85,8 @@ class LauncherRun final : public RunOutput {
 
     // args: the words after the program's name.
     LauncherRun(FakeGraphicsSystem& graphics, std::initializer_list<std::string_view> args)
-        : exitCode_{
-              launcher(graphics, ownFolder_.path()).run(std::vector<std::string_view>{args})} {}
+        : exitCode_{launcher(graphics, ownFolder_.emplace().path())
+                        .run(std::vector<std::string_view>{args})} {}
 
     // gameFolder: where the settings file is kept; nullopt when the system cannot say.
     LauncherRun(FakeGraphicsSystem& graphics,
@@ -107,7 +107,7 @@ class LauncherRun final : public RunOutput {
         }
         argv.push_back(nullptr);
         const int argc = static_cast<int>(copies.size());
-        exitCode_ = launcher(graphics, ownFolder_.path()).run(argc, argv.data());
+        exitCode_ = launcher(graphics, ownFolder_.emplace().path()).run(argc, argv.data());
     }
 
     [[nodiscard]] int exitCode() const {
@@ -121,8 +121,9 @@ class LauncherRun final : public RunOutput {
         return game::Launcher{outStream(), errStream(), graphics, gameFolder};
     }
 
-    // Declared first, so it exists before the run uses it.
-    TempFolder ownFolder_; // the game's folder, unless the run is given one
+    // The game's folder, made only for a run that is not given one. Declared first, so it can be
+    // made before the run.
+    std::optional<TempFolder> ownFolder_;
     int exitCode_{};
 };
 
