@@ -43,21 +43,31 @@ void setSwapChainSize(bgfx::SwapChain& swapChain, Size pixelSize) {
     swapChain.height = static_cast<std::uint32_t>(pixelSize.height);
 }
 
-// Whether bgfx draws on a CPU device. Direct3D reports Windows' software rasterizer (WARP) with
-// bgfx's software id or Microsoft's own vendor id, and Microsoft makes no graphics cards. Vulkan
-// reports the device's own vendor id, but marks CPU devices as software rasterizers in its list of
-// devices.
+// Windows' software rasterizer (WARP) as Direct3D lists it: the "Microsoft Basic Render Driver",
+// with Microsoft's vendor id.
+constexpr std::uint16_t warpDeviceId = 0x008C;
+
+// Whether bgfx draws on a CPU device.
+// - Direct3D: on the WARP adapter.
+// - Vulkan: bgfx keeps the device's own vendor id, but its list of devices marks CPU devices with
+//   its software id. The device in use is a CPU one when the list has a software entry with its
+//   device id, and no graphics card with both its vendor and device ids.
+// WARP that bgfx falls back to by itself (Direct3D 11 retrying on a graphics card's adapter) is
+// not recognised.
 bool drawsOnCpu(const bgfx::Caps& caps) {
-    if (caps.vendorId == BGFX_PCI_ID_SOFTWARE_RASTERIZER ||
-        caps.vendorId == BGFX_PCI_ID_MICROSOFT) {
+    if (caps.vendorId == BGFX_PCI_ID_MICROSOFT && caps.deviceId == warpDeviceId) {
         return true;
     }
     const std::span<const bgfx::Caps::GPU> gpus{caps.gpu};
-    return std::ranges::any_of(gpus.first(std::min<std::size_t>(caps.numGPUs, gpus.size())),
-                               [&caps](const bgfx::Caps::GPU& gpu) {
-                                   return gpu.vendorId == BGFX_PCI_ID_SOFTWARE_RASTERIZER &&
-                                          gpu.deviceId == caps.deviceId;
-                               });
+    const auto listed = gpus.first(std::min<std::size_t>(caps.numGPUs, gpus.size()));
+    const bool isListedAsCpu = std::ranges::any_of(listed, [&caps](const bgfx::Caps::GPU& gpu) {
+        return gpu.vendorId == BGFX_PCI_ID_SOFTWARE_RASTERIZER && gpu.deviceId == caps.deviceId;
+    });
+    const bool isListedAsGraphicsCard =
+        std::ranges::any_of(listed, [&caps](const bgfx::Caps::GPU& gpu) {
+            return gpu.vendorId == caps.vendorId && gpu.deviceId == caps.deviceId;
+        });
+    return isListedAsCpu && !isListedAsGraphicsCard;
 }
 
 // bgfx's 0xRRGGBBAA form of a colour.
@@ -107,7 +117,10 @@ BgfxRenderer::BgfxRenderer(const platform::Window& window, std::optional<Backend
     init.type = backendChosen ? bgfxTypeOf(*backend) : bgfx::RendererType::Count;
     init.fallback = !backendChosen;
     if (device == DeviceChoice::Cpu) {
-        init.vendorId = BGFX_PCI_ID_SOFTWARE_RASTERIZER; // WARP, or a Vulkan device of type CPU
+        // Direct3D picks the adapter with this vendor id: Microsoft's is WARP. Vulkan picks the
+        // device bgfx marks with its software id: a device of type CPU.
+        const bool isDirect3D = backend == Backend::Direct3D11 || backend == Backend::Direct3D12;
+        init.vendorId = isDirect3D ? BGFX_PCI_ID_MICROSOFT : BGFX_PCI_ID_SOFTWARE_RASTERIZER;
     }
     init.platformData.type = nativeWindow.kind == platform::NativeWindow::Kind::Wayland
                                  ? bgfx::NativeWindowHandleType::Wayland
