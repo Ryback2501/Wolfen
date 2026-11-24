@@ -33,12 +33,15 @@ class CommandLine {
     // The usage text, listing the renderers available on this computer.
     [[nodiscard]] static std::string usage(std::span<const engine::render::Backend> available);
     // The one line shown after an option error, pointing to --help.
-    [[nodiscard]] static std::string_view hint();
+    [[nodiscard]] static std::string hint();
     // The name of a renderer as written in --renderer, for example "vulkan".
     [[nodiscard]] static std::string_view optionName(engine::render::Backend backend);
 
   private:
-    // Records the error to report.
+    // Reads the value of --renderer: the renderer it names, if Wolfen knows it and this computer
+    // supports it; otherwise records the error.
+    void readRenderer(std::string_view name, std::span<const engine::render::Backend> available);
+    // Records the error to report, unless an earlier one is already recorded.
     void fail(std::string message);
 
     Action action_{Action::Run};

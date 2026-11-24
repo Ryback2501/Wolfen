@@ -3,8 +3,11 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
-#include <type_traits>
+#include <cstdint>
+#include <iterator>
+#include <ranges>
 #include <utility>
+#include <vector>
 
 namespace wolfen::game {
 
@@ -12,6 +15,63 @@ namespace {
 
 using engine::platform::WindowMode;
 using engine::render::Backend;
+
+// What a start option does once it is read.
+enum class Option : std::uint8_t { Renderer, Fullscreen, Help, Version };
+
+// One start option: everything the reading and the usage need to know about it.
+struct OptionRow {
+    Option option;
+    std::string_view name;
+    // The option's value as the usage shows it ("<name>"); empty for an option with no value.
+    std::string_view valueShown;
+    // The option's value as its error names it ("a renderer name").
+    std::string_view valueNeeded;
+    // The usage's help line.
+    std::string_view help;
+};
+
+// Every start option, in the order the usage lists them.
+constexpr std::array<OptionRow, 4> options{{
+    {.option = Option::Renderer,
+     .name = "--renderer",
+     .valueShown = "<name>",
+     .valueNeeded = "a renderer name",
+     .help = "Draw with this renderer. Available on this computer:"},
+    {.option = Option::Fullscreen,
+     .name = "--fullscreen",
+     .valueShown = "",
+     .valueNeeded = "",
+     .help = "Start in borderless fullscreen."},
+    {.option = Option::Help,
+     .name = "--help",
+     .valueShown = "",
+     .valueNeeded = "",
+     .help = "Show this help and exit."},
+    {.option = Option::Version,
+     .name = "--version",
+     .valueShown = "",
+     .valueNeeded = "",
+     .help = "Show the version and exit."},
+}};
+
+// Whether the option takes a value (the word after it).
+constexpr bool takesValue(const OptionRow& row) {
+    return !row.valueShown.empty();
+}
+
+// An option that takes a value names it both in the usage and in its error.
+static_assert(std::ranges::all_of(options,
+                                  [](const OptionRow& row) {
+                                      return takesValue(row) == !row.valueNeeded.empty();
+                                  }),
+              "an option's value is described both for the usage and for its error, or not at all");
+
+// An option as the usage shows it: its name, then its value if it takes one.
+std::string shownOption(const OptionRow& row) {
+    return takesValue(row) ? std::string{row.name} + " " + std::string{row.valueShown}
+                           : std::string{row.name};
+}
 
 struct NamedRenderer {
     std::string_view name;
@@ -26,22 +86,27 @@ constexpr std::array<NamedRenderer, 5> knownRenderers{
      {.name = "d3d11", .backend = Backend::Direct3D11},
      {.name = "d3d12", .backend = Backend::Direct3D12}}};
 
-// The first known renderer that `matches` accepts, or null. A plain loop returning a pointer, so
+// The first row of the table that `matches` accepts, or null. A plain loop returning a pointer, so
 // the code does not depend on whether the library's array iterators are pointers.
-template <typename Matches> const NamedRenderer* knownRenderer(const Matches& matches) {
-    for (const NamedRenderer& named : knownRenderers) {
-        if (matches(named)) {
-            return &named;
+template <typename Row, std::size_t rowCount, typename Matches>
+constexpr const Row* firstRow(const std::array<Row, rowCount>& table, const Matches& matches) {
+    for (const Row& row : table) {
+        if (matches(row)) {
+            return &row;
         }
     }
     return nullptr;
 }
 
-// Whether the list holds the item. The item's type is taken from the list, so "--help" is
-// compared as a string_view.
-template <typename Item>
-bool contains(std::span<const Item> list, const std::type_identity_t<Item>& item) {
-    return std::ranges::find(list, item) != list.end();
+// The help option's row: the hint line after an error names it. Worked out while compiling: without
+// a help row there is nothing to follow, and the build fails here.
+constexpr const OptionRow& helpRow =
+    *firstRow(options, [](const OptionRow& row) { return row.option == Option::Help; });
+
+// Whether the list holds the item.
+template <typename List>
+bool contains(const List& list, const std::ranges::range_value_t<List>& item) {
+    return std::ranges::find(list, item) != std::ranges::end(list);
 }
 
 // The available renderers, by name, in the fixed order: "vulkan, opengl", or "(none)".
@@ -56,68 +121,86 @@ std::string availableList(std::span<const Backend> available) {
     return list.empty() ? "(none)" : list;
 }
 
-// The error for an option given more than once.
-std::string givenTwiceError(std::string_view option) {
-    return "Option '" + std::string{option} + "' given twice";
-}
-
 } // namespace
 
 CommandLine::CommandLine(std::span<const std::string_view> args,
                          std::span<const Backend> available) {
-    // --help wins over everything, then --version over everything else.
-    if (contains(args, "--help")) {
-        action_ = Action::Help;
-        return;
-    }
-    if (contains(args, "--version")) {
-        action_ = Action::Version;
-        return;
-    }
-
-    // Otherwise the first error, reading left to right, is the one reported.
-    bool rendererSeen = false;
+    // Every word is read, and only the first error, reading left to right, is kept. The help
+    // option, then the version option, win over everything else wherever they are.
+    std::optional<Action> action;
+    std::vector<Option> seen;
+    // Whether a value follows the word at `at`. A word starting with '-' is never a value: it is
+    // read as an option of its own.
+    const auto valueFollows = [args](std::size_t at) {
+        return at + 1 < args.size() && !args[at + 1].starts_with('-');
+    };
     for (std::size_t i = 0; i < args.size(); ++i) {
         const std::string_view word = args[i];
-        if (word == "--fullscreen") {
-            if (windowMode_ == WindowMode::Fullscreen) {
-                fail(givenTwiceError(word));
-                return;
-            }
-            windowMode_ = WindowMode::Fullscreen;
+        const OptionRow* row = firstRow(
+            options, [word](const OptionRow& candidate) { return candidate.name == word; });
+        if (row == nullptr) {
+            fail("Unknown option '" + std::string{word} + "'");
             continue;
         }
-        if (word != "--renderer") {
-            fail("Unknown option '" + std::string{word} + "'");
-            return;
+        if (contains(seen, row->option)) {
+            fail("Option '" + std::string{word} + "' given twice");
+            if (takesValue(*row) && valueFollows(i)) {
+                ++i; // its value is not an option of its own
+            }
+            continue;
         }
-        if (rendererSeen) {
-            fail(givenTwiceError(word));
-            return;
+        seen.push_back(row->option);
+
+        std::string_view value;
+        if (takesValue(*row)) {
+            if (!valueFollows(i)) {
+                fail("Option '" + std::string{word} + "' needs " + std::string{row->valueNeeded});
+                continue;
+            }
+            value = args[++i];
         }
-        rendererSeen = true;
-        // A word starting with '-' is never a renderer name: it is read as an option of its own.
-        if (i + 1 == args.size() || args[i + 1].starts_with('-')) {
-            fail("Option '--renderer' needs a renderer name");
-            return;
+
+        switch (row->option) {
+        case Option::Renderer:
+            readRenderer(value, available);
+            break;
+        case Option::Fullscreen:
+            windowMode_ = WindowMode::Fullscreen;
+            break;
+        case Option::Help:
+            action = Action::Help;
+            break;
+        case Option::Version:
+            action = action.value_or(Action::Version); // the help option still wins
+            break;
         }
-        const std::string name{args[++i]};
-        const NamedRenderer* named = knownRenderer(
-            [&name](const NamedRenderer& candidate) { return candidate.name == name; });
-        if (named == nullptr || !contains(available, named->backend)) {
-            const std::string problem =
-                named == nullptr ? "Unknown renderer '" + name + "'"
-                                 : "Renderer '" + name + "' is not available on this computer";
-            fail(problem + ". Available: " + availableList(available));
-            return;
-        }
-        backend_ = named->backend;
+    }
+
+    if (action) {
+        action_ = *action;
+    } else if (!error_.empty()) {
+        action_ = Action::Error;
     }
 }
 
+void CommandLine::readRenderer(std::string_view name, std::span<const Backend> available) {
+    const NamedRenderer* named = firstRow(
+        knownRenderers, [name](const NamedRenderer& candidate) { return candidate.name == name; });
+    if (named == nullptr || !contains(available, named->backend)) {
+        const std::string problem =
+            named == nullptr
+                ? "Unknown renderer '" + std::string{name} + "'"
+                : "Renderer '" + std::string{name} + "' is not available on this computer";
+        fail(problem + ". Available: " + availableList(available));
+        return;
+    }
+    backend_ = named->backend;
+}
+
 void CommandLine::fail(std::string message) {
-    action_ = Action::Error;
-    error_ = std::move(message);
+    if (error_.empty()) {
+        error_ = std::move(message);
+    }
 }
 
 CommandLine::Action CommandLine::action() const {
@@ -137,24 +220,35 @@ const std::string& CommandLine::error() const {
 }
 
 std::string CommandLine::usage(std::span<const Backend> available) {
-    return "Usage: wolfen [options]\n"
-           "\n"
-           "Options:\n"
-           "  --renderer <name>  Draw with this renderer. Available on this computer: " +
-           availableList(available) +
-           "\n"
-           "  --fullscreen       Start in borderless fullscreen.\n"
-           "  --help             Show this help and exit.\n"
-           "  --version          Show the version and exit.\n";
+    // The help lines start two spaces after the longest option as shown.
+    std::size_t helpColumn = 0;
+    for (const OptionRow& row : options) {
+        helpColumn = std::max(helpColumn, shownOption(row).size() + 2);
+    }
+
+    std::string text = "Usage: wolfen [options]\n"
+                       "\n"
+                       "Options:\n";
+    for (const OptionRow& row : options) {
+        const std::string shown = shownOption(row);
+        text += "  " + shown + std::string(helpColumn - shown.size(), ' ') + std::string{row.help};
+        if (row.option == Option::Renderer) {
+            text += " " + availableList(available);
+        }
+        text += '\n';
+    }
+    return text;
 }
 
-std::string_view CommandLine::hint() {
-    return "Run 'wolfen --help' to see the available options.";
+std::string CommandLine::hint() {
+    return "Run 'wolfen " + std::string{helpRow.name} + "' to see the available options.";
 }
 
 std::string_view CommandLine::optionName(Backend backend) {
-    const NamedRenderer* named = knownRenderer(
-        [backend](const NamedRenderer& candidate) { return candidate.backend == backend; });
+    const NamedRenderer* named =
+        firstRow(knownRenderers, [backend](const NamedRenderer& candidate) {
+            return candidate.backend == backend;
+        });
     return named == nullptr ? std::string_view{} : named->name;
 }
 
