@@ -509,7 +509,7 @@ TEST_CASE("With --software the game draws with the CPU, and the title says so", 
 }
 
 TEST_CASE("With --software the renderers that can draw with the CPU are tried in the order Vulkan, "
-          "Direct3D 11, Direct3D 12, in one window",
+          "Direct3D 11, Direct3D 12, each in a window of its own",
           "[software]") {
     FakeGraphicsSystem graphics;
     graphics.available = {Backend::Direct3D12, Backend::OpenGL, Backend::Direct3D11,
@@ -518,7 +518,12 @@ TEST_CASE("With --software the renderers that can draw with the CPU are tried in
     const LauncherRun run{graphics, {"--software"}};
     REQUIRE(graphics.record.cpuTries ==
             std::vector<Backend>{Backend::Vulkan, Backend::Direct3D11, Backend::Direct3D12});
-    REQUIRE(countOf(graphics.record.steps, "open window") == 1);
+    // A failed try closes its window: a renderer on another graphics API never reuses it.
+    REQUIRE(graphics.record.steps == std::vector<std::string>{"open window", "start CPU renderer",
+                                                              "close window", "open window",
+                                                              "start CPU renderer", "close window",
+                                                              "open window", "start CPU renderer",
+                                                              "close renderer", "close window"});
     REQUIRE(graphics.record.titles == std::vector<std::string>{titleWith("Direct3D 12, software")});
     REQUIRE(run.err().empty());
     REQUIRE(run.exitCode() == 0);
