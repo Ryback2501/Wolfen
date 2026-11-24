@@ -63,12 +63,14 @@ void addWindowEvent(const SDL_Event& event, std::vector<WindowEvent>& events) {
 // The screen as the system knows it: its name (empty when it has none) and its top-left corner on
 // the desktop (unknown when the system cannot say).
 Screen screenOf(SDL_DisplayID display) {
-    const char* name = SDL_GetDisplayName(display);
-    SDL_Rect bounds;
-    return {.name = name == nullptr ? std::string{} : std::string{name},
-            .position = SDL_GetDisplayBounds(display, &bounds)
-                            ? std::optional<Point>{Point{.x = bounds.x, .y = bounds.y}}
-                            : std::nullopt};
+    Screen screen;
+    if (const char* name = SDL_GetDisplayName(display); name != nullptr) {
+        screen.name = name;
+    }
+    if (SDL_Rect bounds; SDL_GetDisplayBounds(display, &bounds)) {
+        screen.position = Point{.x = bounds.x, .y = bounds.y};
+    }
+    return screen;
 }
 
 // The connected screen that matches the saved one (see ScreenList), or the primary screen.

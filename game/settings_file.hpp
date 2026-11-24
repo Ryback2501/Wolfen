@@ -4,8 +4,6 @@
 #include "platform/window.hpp"
 
 #include <filesystem>
-#include <string>
-#include <string_view>
 
 namespace wolfen::game {
 
@@ -16,9 +14,12 @@ class SettingsFile {
     explicit SettingsFile(std::filesystem::path path);
 
     [[nodiscard]] const std::filesystem::path& path() const;
-    // The saved screen. Its name comes from the first line that starts with "screen=": everything
-    // after the first '=', without spaces or a CR at the ends. The name is empty when there is
-    // none: no such file, no such line, an empty name, or a file that cannot be read.
+    // The saved screen. For each key, the first line that starts with it counts, and its value is
+    // everything after the first '=', without spaces or a CR at the ends.
+    // - The name comes from "screen=". It is empty when there is none: no such file, no such
+    //   line, an empty name, or a file that cannot be read.
+    // - The position comes from "screen_position=<x>,<y>": two whole numbers, with optional spaces
+    //   around each. It is unknown (nullopt) when the line is missing, empty or anything else.
     [[nodiscard]] engine::platform::Screen screen() const;
     // Writes the file again with the given screen; false when it could not be written.
     [[nodiscard]] bool save(const engine::platform::Screen& screen) const;

@@ -3,7 +3,7 @@
 #include <charconv>
 #include <cstddef>
 #include <fstream>
-#include <memory>
+#include <iterator>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -33,8 +33,9 @@ std::string_view withoutSpacesAtTheEnds(std::string_view text) {
 // anything else, or for a number too large for an int.
 std::optional<int> wholeNumber(std::string_view text) {
     text = withoutSpacesAtTheEnds(text);
-    const char* begin = std::to_address(text.begin());
-    const char* end = std::to_address(text.end());
+    const std::string digits{text}; // from_chars reads characters between two plain pointers
+    const char* begin = digits.c_str();
+    const char* end = std::next(begin, static_cast<std::ptrdiff_t>(digits.size()));
     int number = 0;
     const auto [stop, error] = std::from_chars(begin, end, number);
     if (error != std::errc{} || stop != end) {
