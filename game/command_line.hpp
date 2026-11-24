@@ -23,10 +23,13 @@ class CommandLine {
                 std::span<const engine::render::Backend> available);
 
     [[nodiscard]] Action action() const;
-    // For Run: the renderer asked for with --renderer, if any.
+    // For Run: the renderer asked for with --renderer, if any; never with --software.
     [[nodiscard]] std::optional<engine::render::Backend> backend() const;
     // For Run: Fullscreen when --fullscreen was given, Windowed otherwise.
     [[nodiscard]] engine::platform::WindowMode windowMode() const;
+    // For Run: whether --software was given, so the game draws with the CPU on a renderer it
+    // picks itself.
+    [[nodiscard]] bool isSoftwareAsked() const;
     // For Error: the message to show, without the usage.
     [[nodiscard]] const std::string& error() const;
 
@@ -47,6 +50,7 @@ class CommandLine {
     Action action_{Action::Run};
     std::optional<engine::render::Backend> backend_;
     engine::platform::WindowMode windowMode_{engine::platform::WindowMode::Windowed};
+    bool isSoftwareAsked_{false};
     std::string error_;
 };
 
