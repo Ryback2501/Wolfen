@@ -4,9 +4,13 @@
 
 #include <iostream>
 
+using wolfen::engine::app::SdlBgfxSystem;
+using wolfen::engine::platform::GameFolder;
+using wolfen::game::Launcher;
+
 int main(int argc, char* argv[]) {
-    wolfen::engine::app::SdlBgfxSystem graphics;
-    const wolfen::engine::platform::GameFolder gameFolder;
-    wolfen::game::Launcher launcher{std::cout, std::cerr, graphics, gameFolder.path()};
+    SdlBgfxSystem graphics;
+    const GameFolder gameFolder;
+    Launcher launcher{std::cout, std::cerr, graphics, gameFolder.path()};
     return launcher.run(argc, argv);
 }

@@ -11,10 +11,10 @@
 
 namespace wolfen::game {
 
-namespace {
-
 using engine::platform::WindowMode;
 using engine::render::Backend;
+
+namespace {
 
 // What a start option does once it is read.
 enum class Option : std::uint8_t { Renderer, Fullscreen, Help, Version };

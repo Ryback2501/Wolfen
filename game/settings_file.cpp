@@ -12,6 +12,9 @@
 
 namespace wolfen::game {
 
+using engine::Point;
+using engine::platform::Screen;
+
 namespace {
 
 // The starts of the lines that hold the screen's name and its position.
@@ -45,7 +48,7 @@ std::optional<int> wholeNumber(std::string_view text) {
 }
 
 // The position written as "<x>,<y>", or nullopt when it is anything else.
-std::optional<engine::Point> positionFrom(std::string_view text) {
+std::optional<Point> positionFrom(std::string_view text) {
     const std::size_t comma = text.find(',');
     if (comma == std::string_view::npos) {
         return std::nullopt;
@@ -55,7 +58,7 @@ std::optional<engine::Point> positionFrom(std::string_view text) {
     if (!x || !y) {
         return std::nullopt;
     }
-    return engine::Point{.x = *x, .y = *y};
+    return Point{.x = *x, .y = *y};
 }
 
 // What follows the key at the start of the line, without spaces or a CR at the ends.
@@ -71,10 +74,10 @@ const std::filesystem::path& SettingsFile::path() const {
     return path_;
 }
 
-engine::platform::Screen SettingsFile::screen() const {
+Screen SettingsFile::screen() const {
     // A file that is missing or cannot be read gives no lines. For each key, the first line counts.
     std::ifstream file{path_};
-    engine::platform::Screen screen;
+    Screen screen;
     bool hasNameLine = false;
     bool hasPositionLine = false;
     std::string line;
@@ -90,7 +93,7 @@ engine::platform::Screen SettingsFile::screen() const {
     return screen;
 }
 
-bool SettingsFile::save(const engine::platform::Screen& screen) const {
+bool SettingsFile::save(const Screen& screen) const {
     std::ofstream file{path_}; // replaces what was there
     file << screenKey << screen.name << '\n' << positionKey;
     if (screen.position) {

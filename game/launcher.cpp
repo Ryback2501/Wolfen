@@ -15,12 +15,16 @@
 
 namespace wolfen::game {
 
-Launcher::Launcher(std::ostream& out, std::ostream& err, engine::app::GraphicsSystem& graphics,
+using engine::app::GraphicsSystem;
+using engine::platform::Screen;
+using engine::render::Backend;
+
+Launcher::Launcher(std::ostream& out, std::ostream& err, GraphicsSystem& graphics,
                    std::optional<std::filesystem::path> gameFolder)
     : out_{&out}, err_{&err}, graphics_{&graphics}, gameFolder_{std::move(gameFolder)} {}
 
 int Launcher::run(std::span<const std::string_view> args) {
-    const std::vector<engine::render::Backend> available = graphics_->availableBackends();
+    const std::vector<Backend> available = graphics_->availableBackends();
     const CommandLine commandLine{args, available};
 
     switch (commandLine.action()) {
@@ -42,18 +46,16 @@ int Launcher::run(std::span<const std::string_view> args) {
     if (gameFolder_) {
         settingsFile.emplace(*gameFolder_ / "settings.ini");
     }
-    const engine::platform::Screen screen =
-        settingsFile ? settingsFile->screen() : engine::platform::Screen{};
+    const Screen screen = settingsFile ? settingsFile->screen() : Screen{};
 
-    const std::optional<engine::render::Backend> backend = commandLine.backend();
+    const std::optional<Backend> backend = commandLine.backend();
     Game game{*out_, *err_, *graphics_};
     switch (game.run(backend, commandLine.windowMode(), screen)) {
     case Game::Outcome::Ended:
         saveScreen(settingsFile, game.screenAtQuit());
         return 0;
     case Game::Outcome::ChosenRendererFailed:
-        *err_ << "Renderer '"
-              << CommandLine::optionName(backend.value_or(engine::render::Backend::Other))
+        *err_ << "Renderer '" << CommandLine::optionName(backend.value_or(Backend::Other))
               << "' could not be started on this computer.\n";
         return 1;
     case Game::Outcome::CouldNotStart:
@@ -63,7 +65,7 @@ int Launcher::run(std::span<const std::string_view> args) {
 }
 
 void Launcher::saveScreen(const std::optional<SettingsFile>& settingsFile,
-                          const engine::platform::Screen& screen) const {
+                          const Screen& screen) const {
     if (!settingsFile) {
         *err_ << "Warning: could not save settings: the game's folder is unknown\n";
         return;
