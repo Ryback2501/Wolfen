@@ -14,6 +14,8 @@
 #include <string_view>
 #include <vector>
 
+using wolfen::engine::Point;
+using wolfen::engine::platform::Screen;
 using wolfen::engine::platform::WindowEvent;
 using wolfen::engine::platform::WindowMode;
 using wolfen::engine::render::Backend;
@@ -73,10 +75,10 @@ void requirePrimaryScreenThenSaved(const std::optional<std::string>& settingsTex
         folder.write("settings.ini", *settingsText);
     }
     FakeGraphicsSystem graphics;
-    graphics.screen.name = "DP-1";
+    graphics.screen = {.name = "DP-1", .position = Point{.x = 0, .y = 0}};
     const LauncherRun run{graphics, folder.path(), {"--fullscreen"}};
     REQUIRE(graphics.record.windowSettings.screen.name.empty());
-    REQUIRE(folder.text("settings.ini") == "screen=DP-1\n");
+    REQUIRE(folder.text("settings.ini") == "screen=DP-1\nscreen_position=0,0\n");
     REQUIRE(run.err().empty());
     REQUIRE(run.exitCode() == 0);
 }
@@ -86,21 +88,23 @@ void requirePrimaryScreenThenSaved(const std::optional<std::string>& settingsTex
 void requireScreenSavedOnQuit(WindowEvent quit, std::initializer_list<std::string_view> args) {
     const TempFolder folder;
     FakeGraphicsSystem graphics;
-    graphics.screen.name = "HDMI-2";
+    graphics.screen = {.name = "HDMI-2", .position = Point{.x = 1920, .y = 0}};
     graphics.events = {{}, {quit}};
     const LauncherRun run{graphics, folder.path(), args};
-    REQUIRE(folder.text("settings.ini") == "screen=HDMI-2\n");
+    REQUIRE(folder.text("settings.ini") == "screen=HDMI-2\nscreen_position=1920,0\n");
     REQUIRE(run.err().empty());
     REQUIRE(run.exitCode() == 0);
 }
 
-// A start with the given options and a saved screen: the window is asked for that screen.
+// A start with the given options and a saved screen: the window is asked for that screen, by its
+// name and its position.
 void requireOpensOnSavedScreen(std::initializer_list<std::string_view> args) {
     const TempFolder folder;
-    folder.write("settings.ini", "screen=HDMI-2\n");
+    folder.write("settings.ini", "screen=HDMI-2\nscreen_position=1920,0\n");
     FakeGraphicsSystem graphics;
     const LauncherRun run{graphics, folder.path(), args};
-    REQUIRE(graphics.record.windowSettings.screen.name == "HDMI-2");
+    REQUIRE(graphics.record.windowSettings.screen ==
+            Screen{.name = "HDMI-2", .position = Point{.x = 1920, .y = 0}});
     REQUIRE(run.exitCode() == 0);
 }
 
@@ -371,7 +375,7 @@ TEST_CASE("Fullscreen is not remembered: after quitting fullscreen, the next sta
           "[settings][fullscreen]") {
     const TempFolder folder;
     FakeGraphicsSystem first;
-    first.screen.name = "HDMI-2";
+    first.screen = {.name = "HDMI-2", .position = Point{.x = 1920, .y = 0}};
     first.events = {{WindowEvent::FullscreenKeyPressed}, {WindowEvent::CloseRequested}};
     const LauncherRun firstRun{first, folder.path(), {}};
     REQUIRE(first.record.fullscreenSwitches == 1);
@@ -379,7 +383,7 @@ TEST_CASE("Fullscreen is not remembered: after quitting fullscreen, the next sta
     FakeGraphicsSystem next;
     const LauncherRun nextRun{next, folder.path(), {}};
     REQUIRE(next.record.windowSettings.mode == WindowMode::Windowed);
-    REQUIRE(next.record.windowSettings.screen.name == "HDMI-2");
+    REQUIRE(next.record.windowSettings.screen == first.screen);
 }
 
 TEST_CASE("With --help, --version or a wrong option, no window opens and the settings file is "
@@ -437,8 +441,18 @@ TEST_CASE("A screen the system gives no name is saved as screen= with no name", 
     const TempFolder folder;
     folder.write("settings.ini", "screen=HDMI-2\n");
     FakeGraphicsSystem graphics;
-    graphics.screen.name = "";
+    graphics.screen = {.name = "", .position = Point{.x = 0, .y = 0}};
     const LauncherRun run{graphics, folder.path(), {}};
-    REQUIRE(folder.text("settings.ini") == "screen=\n");
+    REQUIRE(folder.text("settings.ini") == "screen=\nscreen_position=0,0\n");
+    REQUIRE(run.exitCode() == 0);
+}
+
+TEST_CASE("A screen whose position the system cannot give is saved with an empty screen_position=",
+          "[settings]") {
+    const TempFolder folder;
+    FakeGraphicsSystem graphics;
+    graphics.screen = {.name = "HDMI-2", .position = std::nullopt};
+    const LauncherRun run{graphics, folder.path(), {}};
+    REQUIRE(folder.text("settings.ini") == "screen=HDMI-2\nscreen_position=\n");
     REQUIRE(run.exitCode() == 0);
 }
