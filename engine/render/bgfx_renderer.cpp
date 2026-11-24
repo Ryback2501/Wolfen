@@ -48,14 +48,16 @@ void setSwapChainSize(bgfx::SwapChain& swapChain, Size pixelSize) {
 constexpr std::uint16_t warpDeviceId = 0x008C;
 
 // Whether bgfx draws on a CPU device.
-// - Direct3D: on the WARP adapter.
+// - Direct3D: on the WARP adapter, or on an adapter with no vendor id, which bgfx reports with its
+//   software id.
 // - Vulkan: bgfx keeps the device's own vendor id, but its list of devices marks CPU devices with
 //   its software id. The device in use is a CPU one when the list has a software entry with its
 //   device id, and no graphics card with both its vendor and device ids.
 // WARP that bgfx falls back to by itself (Direct3D 11 retrying on a graphics card's adapter) is
 // not recognised.
 bool drawsOnCpu(const bgfx::Caps& caps) {
-    if (caps.vendorId == BGFX_PCI_ID_MICROSOFT && caps.deviceId == warpDeviceId) {
+    if (caps.vendorId == BGFX_PCI_ID_SOFTWARE_RASTERIZER ||
+        (caps.vendorId == BGFX_PCI_ID_MICROSOFT && caps.deviceId == warpDeviceId)) {
         return true;
     }
     const std::span<const bgfx::Caps::GPU> gpus{caps.gpu};
@@ -117,10 +119,16 @@ BgfxRenderer::BgfxRenderer(const platform::Window& window, std::optional<Backend
     init.type = backendChosen ? bgfxTypeOf(*backend) : bgfx::RendererType::Count;
     init.fallback = !backendChosen;
     if (device == DeviceChoice::Cpu) {
-        // Direct3D picks the adapter with this vendor id: Microsoft's is WARP. Vulkan picks the
-        // device bgfx marks with its software id: a device of type CPU.
-        const bool isDirect3D = backend == Backend::Direct3D11 || backend == Backend::Direct3D12;
-        init.vendorId = isDirect3D ? BGFX_PCI_ID_MICROSOFT : BGFX_PCI_ID_SOFTWARE_RASTERIZER;
+        // Direct3D picks the adapter with these ids: WARP's, as other Microsoft adapters (a virtual
+        // machine's or a remote session's display) may come first. bgfx looks only at the first
+        // four adapters and WARP is listed last, so a computer with more misses it; this is
+        // accepted. Vulkan picks the device bgfx marks with its software id: a device of type CPU.
+        if (backend == Backend::Direct3D11 || backend == Backend::Direct3D12) {
+            init.vendorId = BGFX_PCI_ID_MICROSOFT;
+            init.deviceId = warpDeviceId;
+        } else {
+            init.vendorId = BGFX_PCI_ID_SOFTWARE_RASTERIZER;
+        }
     }
     init.platformData.type = nativeWindow.kind == platform::NativeWindow::Kind::Wayland
                                  ? bgfx::NativeWindowHandleType::Wayland
