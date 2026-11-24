@@ -17,10 +17,10 @@ class SettingsFile {
     // The saved screen's name: from the first line that starts with "screen=", everything after
     // the first '=', without spaces or a CR at the ends. Empty when there is none: no such file,
     // no such line, an empty name, or a file that cannot be read.
-    [[nodiscard]] std::string screen() const;
-    // Writes the file again with the given screen as its one line; false when it could not be
+    [[nodiscard]] std::string screenName() const;
+    // Writes the file again with the given screen name as its one line; false when it could not be
     // written.
-    [[nodiscard]] bool save(std::string_view screen) const;
+    [[nodiscard]] bool save(std::string_view screenName) const;
 
   private:
     std::filesystem::path path_;

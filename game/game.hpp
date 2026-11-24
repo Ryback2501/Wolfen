@@ -33,7 +33,7 @@ class Game {
     // in a window or in fullscreen, on the screen with the given name (empty: the primary one),
     // until it ends; returns how it ended. The window is closed by then.
     Outcome run(std::optional<engine::render::Backend> backend,
-                engine::platform::WindowMode windowMode, std::string_view screen);
+                engine::platform::WindowMode windowMode, std::string_view screenName);
     // Runs the game in a window on the primary screen, with the best renderer for this computer.
     Outcome run();
 

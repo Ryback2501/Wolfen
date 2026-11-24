@@ -32,7 +32,7 @@ const std::filesystem::path& SettingsFile::path() const {
     return path_;
 }
 
-std::string SettingsFile::screen() const {
+std::string SettingsFile::screenName() const {
     // A file that is missing or cannot be read gives no lines.
     std::ifstream file{path_};
     std::string line;
@@ -45,9 +45,9 @@ std::string SettingsFile::screen() const {
     return {};
 }
 
-bool SettingsFile::save(std::string_view screen) const {
+bool SettingsFile::save(std::string_view screenName) const {
     std::ofstream file{path_}; // replaces what was there
-    file << screenKey << screen << '\n';
+    file << screenKey << screenName << '\n';
     file.close();
     return !file.fail();
 }

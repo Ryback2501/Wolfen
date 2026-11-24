@@ -35,7 +35,7 @@ const std::string& Game::screenAtQuit() const {
 }
 
 Game::Outcome Game::run(std::optional<engine::render::Backend> backend,
-                        engine::platform::WindowMode windowMode, std::string_view screen) {
+                        engine::platform::WindowMode windowMode, std::string_view screenName) {
     const std::string title = name();
     *out_ << title << '\n' << std::flush; // flushed, so it shows before the window opens
     try {
@@ -44,7 +44,7 @@ Game::Outcome Game::run(std::optional<engine::render::Backend> backend,
                                                    .size = windowSize,
                                                    .resizable = true,
                                                    .mode = windowMode,
-                                                   .screen = std::string{screen}});
+                                                   .screenName = std::string{screenName}});
         std::unique_ptr<engine::render::Renderer> renderer;
         try {
             renderer = graphics_->startRenderer(*window, backend);

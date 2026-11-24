@@ -94,7 +94,7 @@ SdlWindow::SdlWindow(const WindowSettings& settings) {
 
     const SDL_PropertiesID properties = SDL_CreateProperties();
     const auto centred =
-        static_cast<std::int64_t>(SDL_WINDOWPOS_CENTERED_DISPLAY(screenNamed(settings.screen)));
+        static_cast<std::int64_t>(SDL_WINDOWPOS_CENTERED_DISPLAY(screenNamed(settings.screenName)));
     SDL_SetStringProperty(properties, SDL_PROP_WINDOW_CREATE_TITLE_STRING, settings.title.c_str());
     SDL_SetNumberProperty(properties, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, settings.size.width);
     SDL_SetNumberProperty(properties, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, settings.size.height);

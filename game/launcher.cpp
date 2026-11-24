@@ -42,11 +42,11 @@ int Launcher::run(std::span<const std::string_view> args) {
     if (gameFolder_) {
         settingsFile.emplace(*gameFolder_ / "settings.ini");
     }
-    const std::string screen = settingsFile ? settingsFile->screen() : std::string{};
+    const std::string screenName = settingsFile ? settingsFile->screenName() : std::string{};
 
     const std::optional<engine::render::Backend> backend = commandLine.backend();
     Game game{*out_, *err_, *graphics_};
-    switch (game.run(backend, commandLine.windowMode(), screen)) {
+    switch (game.run(backend, commandLine.windowMode(), screenName)) {
     case Game::Outcome::Ended:
         saveScreen(settingsFile, game.screenAtQuit());
         return 0;
@@ -62,12 +62,12 @@ int Launcher::run(std::span<const std::string_view> args) {
 }
 
 void Launcher::saveScreen(const std::optional<SettingsFile>& settingsFile,
-                          std::string_view screen) const {
+                          std::string_view screenName) const {
     if (!settingsFile) {
         *err_ << "Warning: could not save settings: the game's folder is unknown\n";
         return;
     }
-    if (!settingsFile->save(screen)) {
+    if (!settingsFile->save(screenName)) {
         // The path's own characters (UTF-8), whatever the system's code page.
         const std::u8string path = settingsFile->path().u8string();
         *err_ << "Warning: could not save settings to " << std::string(path.begin(), path.end())

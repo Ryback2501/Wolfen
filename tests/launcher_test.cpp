@@ -75,7 +75,7 @@ void requirePrimaryScreenThenSaved(const std::optional<std::string>& settingsTex
     FakeGraphicsSystem graphics;
     graphics.screenName = "DP-1";
     const LauncherRun run{graphics, folder.path(), {"--fullscreen"}};
-    REQUIRE(graphics.record.windowSettings.screen.empty());
+    REQUIRE(graphics.record.windowSettings.screenName.empty());
     REQUIRE(folder.text("settings.ini") == "screen=DP-1\n");
     REQUIRE(run.err().empty());
     REQUIRE(run.exitCode() == 0);
@@ -100,7 +100,7 @@ void requireOpensOnSavedScreen(std::initializer_list<std::string_view> args) {
     folder.write("settings.ini", "screen=HDMI-2\n");
     FakeGraphicsSystem graphics;
     const LauncherRun run{graphics, folder.path(), args};
-    REQUIRE(graphics.record.windowSettings.screen == "HDMI-2");
+    REQUIRE(graphics.record.windowSettings.screenName == "HDMI-2");
     REQUIRE(run.exitCode() == 0);
 }
 
@@ -363,7 +363,7 @@ TEST_CASE("A saved name with spaces around it, Windows line endings and another 
     folder.write("settings.ini", "screen=  HDMI-2  \r\nfoo=bar\r\n");
     FakeGraphicsSystem graphics;
     const LauncherRun run{graphics, folder.path(), {"--fullscreen"}};
-    REQUIRE(graphics.record.windowSettings.screen == "HDMI-2");
+    REQUIRE(graphics.record.windowSettings.screenName == "HDMI-2");
 }
 
 TEST_CASE("Fullscreen is not remembered: after quitting fullscreen, the next start opens a window "
@@ -379,7 +379,7 @@ TEST_CASE("Fullscreen is not remembered: after quitting fullscreen, the next sta
     FakeGraphicsSystem next;
     const LauncherRun nextRun{next, folder.path(), {}};
     REQUIRE(next.record.windowSettings.mode == WindowMode::Windowed);
-    REQUIRE(next.record.windowSettings.screen == "HDMI-2");
+    REQUIRE(next.record.windowSettings.screenName == "HDMI-2");
 }
 
 TEST_CASE("With --help, --version or a wrong option, no window opens and the settings file is "
@@ -427,7 +427,7 @@ TEST_CASE("When the game's folder is unknown: the primary screen, one warning li
           "[settings]") {
     FakeGraphicsSystem graphics;
     const LauncherRun run{graphics, std::nullopt, {"--fullscreen"}};
-    REQUIRE(graphics.record.windowSettings.screen.empty());
+    REQUIRE(graphics.record.windowSettings.screenName.empty());
     REQUIRE(run.out() == versionLine());
     REQUIRE(run.err() == "Warning: could not save settings: the game's folder is unknown\n");
     REQUIRE(run.exitCode() == 0);

@@ -25,7 +25,7 @@ struct WindowSettings {
     // The name of the screen to open on, centred there or covering it; empty, or a name no
     // connected screen has, means the primary one. Where the system places windows itself (Linux
     // under Wayland), a window may open elsewhere, and nothing is reported.
-    std::string screen;
+    std::string screenName;
 };
 
 // Something that happened to the window since the last poll.
