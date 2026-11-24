@@ -1,9 +1,30 @@
 #include "settings_file.hpp"
 
-#include <stdexcept>
+#include <cstddef>
+#include <fstream>
+#include <string>
+#include <string_view>
 #include <utility>
 
 namespace wolfen::game {
+
+namespace {
+
+// The start of the line that holds the screen's name.
+constexpr std::string_view screenKey = "screen=";
+
+// The text without spaces or CRs at either end.
+std::string_view withoutSpacesAtTheEnds(std::string_view text) {
+    constexpr std::string_view spaces = " \r";
+    const std::size_t first = text.find_first_not_of(spaces);
+    if (first == std::string_view::npos) {
+        return {};
+    }
+    const std::size_t last = text.find_last_not_of(spaces);
+    return text.substr(first, last - first + 1);
+}
+
+} // namespace
 
 SettingsFile::SettingsFile(std::filesystem::path path) : path_{std::move(path)} {}
 
@@ -12,11 +33,23 @@ const std::filesystem::path& SettingsFile::path() const {
 }
 
 std::string SettingsFile::screen() const {
-    throw std::logic_error{"reading " + path_.string() + " is not written yet"};
+    // A file that is missing or cannot be read gives no lines.
+    std::ifstream file{path_};
+    std::string line;
+    while (std::getline(file, line)) {
+        if (line.starts_with(screenKey)) {
+            return std::string{
+                withoutSpacesAtTheEnds(std::string_view{line}.substr(screenKey.size()))};
+        }
+    }
+    return {};
 }
 
-bool SettingsFile::save(std::string_view /*screen*/) const {
-    throw std::logic_error{"saving " + path_.string() + " is not written yet"};
+bool SettingsFile::save(std::string_view screen) const {
+    std::ofstream file{path_}; // replaces what was there
+    file << screenKey << screen << '\n';
+    file.close();
+    return !file.fail();
 }
 
 } // namespace wolfen::game
