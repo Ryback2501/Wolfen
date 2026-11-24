@@ -10,6 +10,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <span>
 
 namespace wolfen::engine::render {
 
@@ -42,6 +43,23 @@ void setSwapChainSize(bgfx::SwapChain& swapChain, Size pixelSize) {
     swapChain.height = static_cast<std::uint32_t>(pixelSize.height);
 }
 
+// Whether bgfx draws on a CPU device. Direct3D reports Windows' software rasterizer (WARP) with
+// bgfx's software id or Microsoft's own vendor id, and Microsoft makes no graphics cards. Vulkan
+// reports the device's own vendor id, but marks CPU devices as software rasterizers in its list of
+// devices.
+bool drawsOnCpu(const bgfx::Caps& caps) {
+    if (caps.vendorId == BGFX_PCI_ID_SOFTWARE_RASTERIZER ||
+        caps.vendorId == BGFX_PCI_ID_MICROSOFT) {
+        return true;
+    }
+    const std::span<const bgfx::Caps::GPU> gpus{caps.gpu};
+    return std::ranges::any_of(gpus.first(std::min<std::size_t>(caps.numGPUs, gpus.size())),
+                               [&caps](const bgfx::Caps::GPU& gpu) {
+                                   return gpu.vendorId == BGFX_PCI_ID_SOFTWARE_RASTERIZER &&
+                                          gpu.deviceId == caps.deviceId;
+                               });
+}
+
 // bgfx's 0xRRGGBBAA form of a colour.
 std::uint32_t packed(Colour colour) {
     return (std::uint32_t{colour.red} << 24U) | (std::uint32_t{colour.green} << 16U) |
@@ -71,7 +89,8 @@ std::vector<Backend> BgfxRenderer::availableBackends() {
     return backends;
 }
 
-BgfxRenderer::BgfxRenderer(const platform::Window& window, std::optional<Backend> backend) {
+BgfxRenderer::BgfxRenderer(const platform::Window& window, std::optional<Backend> backend,
+                           DeviceChoice device) {
     const platform::NativeWindow nativeWindow = window.nativeWindow();
     if (nativeWindow.window == nullptr) {
         // bgfx would quietly start with no window at all, so stop before touching it.
@@ -87,6 +106,9 @@ BgfxRenderer::BgfxRenderer(const platform::Window& window, std::optional<Backend
     const bool backendChosen = backend.has_value() && *backend != Backend::Other;
     init.type = backendChosen ? bgfxTypeOf(*backend) : bgfx::RendererType::Count;
     init.fallback = !backendChosen;
+    if (device == DeviceChoice::Cpu) {
+        init.vendorId = BGFX_PCI_ID_SOFTWARE_RASTERIZER; // WARP, or a Vulkan device of type CPU
+    }
     init.platformData.type = nativeWindow.kind == platform::NativeWindow::Kind::Wayland
                                  ? bgfx::NativeWindowHandleType::Wayland
                                  : bgfx::NativeWindowHandleType::Default;
@@ -103,6 +125,11 @@ BgfxRenderer::BgfxRenderer(const platform::Window& window, std::optional<Backend
     try {
         const bgfx::RendererType::Enum type = bgfx::getRendererType();
         name_ = RendererName::display(backendOf(type), bgfx::getRendererName(type));
+        drawsWithCpu_ = drawsOnCpu(*bgfx::getCaps());
+        if (device == DeviceChoice::Cpu && !drawsWithCpu_) {
+            // bgfx falls back to a graphics card when it finds no CPU device.
+            throw StartupError{"there is no CPU device for this renderer"};
+        }
         fitMainViewToWindow();
     } catch (...) {
         bgfx::shutdown();
@@ -119,7 +146,7 @@ std::string_view BgfxRenderer::name() const {
 }
 
 bool BgfxRenderer::drawsWithCpu() const {
-    return false;
+    return drawsWithCpu_;
 }
 
 void BgfxRenderer::resize(Size pixelSize) {

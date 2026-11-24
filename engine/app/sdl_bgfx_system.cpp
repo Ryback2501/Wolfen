@@ -1,6 +1,5 @@
 #include "app/sdl_bgfx_system.hpp"
 
-#include "core/startup_error.hpp"
 #include "platform/sdl_window.hpp"
 #include "render/bgfx_renderer.hpp"
 
@@ -20,9 +19,9 @@ SdlBgfxSystem::startRenderer(platform::Window& window, std::optional<render::Bac
     return std::make_unique<render::BgfxRenderer>(window, backend);
 }
 
-std::unique_ptr<render::Renderer> SdlBgfxSystem::startCpuRenderer(platform::Window& /*window*/,
-                                                                  render::Backend /*backend*/) {
-    throw StartupError{"drawing with the CPU is not written yet"};
+std::unique_ptr<render::Renderer> SdlBgfxSystem::startCpuRenderer(platform::Window& window,
+                                                                  render::Backend backend) {
+    return std::make_unique<render::BgfxRenderer>(window, backend, render::DeviceChoice::Cpu);
 }
 
 } // namespace wolfen::engine::app
