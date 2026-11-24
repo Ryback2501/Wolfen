@@ -8,6 +8,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <algorithm>
+#include <cstddef>
 #include <filesystem>
 #include <initializer_list>
 #include <optional>
@@ -136,7 +137,7 @@ std::string titleWith(std::string_view renderer) {
 }
 
 // The number of times the steps hold the given one.
-long countOf(const std::vector<std::string>& steps, std::string_view step) {
+std::ptrdiff_t countOf(const std::vector<std::string>& steps, std::string_view step) {
     return std::ranges::count(steps, step);
 }
 
