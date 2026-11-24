@@ -6,7 +6,7 @@
 
 int main(int argc, char* argv[]) {
     wolfen::engine::app::SdlBgfxSystem graphics;
-    wolfen::game::Launcher launcher{std::cout, std::cerr, graphics,
-                                    wolfen::engine::platform::GameFolder::path()};
+    const wolfen::engine::platform::GameFolder gameFolder;
+    wolfen::game::Launcher launcher{std::cout, std::cerr, graphics, gameFolder.path()};
     return launcher.run(argc, argv);
 }
