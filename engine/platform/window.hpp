@@ -22,6 +22,9 @@ struct WindowSettings {
     Size size; // in a window; for Fullscreen, the size it gets when it first leaves fullscreen
     bool resizable{true};
     WindowMode mode{WindowMode::Windowed}; // Fullscreen opens on the primary screen
+    // The name of the screen to open on; empty, or a name no connected screen has, means the
+    // primary one.
+    std::string screen;
 };
 
 // Something that happened to the window since the last poll.
@@ -64,6 +67,9 @@ class Window {
     // fullscreen back to a window with the size, position and maximized state it had before. A
     // window that opened in fullscreen goes back to its settings' size, centred on its screen.
     virtual void switchFullscreen() = 0;
+    // The name of the screen that holds the window's centre (in fullscreen, the screen it covers);
+    // empty when the system gives that screen no name.
+    [[nodiscard]] virtual std::string screenName() const = 0;
     [[nodiscard]] virtual NativeWindow nativeWindow() const = 0;
 };
 

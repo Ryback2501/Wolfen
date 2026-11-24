@@ -4,6 +4,7 @@ configure_file(core/version_text.hpp.in "${PROJECT_BINARY_DIR}/generated/engine/
 
 add_library(engine STATIC
     core/version.cpp
+    platform/game_folder.cpp
     platform/sdl_window.cpp
     render/bgfx_renderer.cpp
     render/renderer_name.cpp

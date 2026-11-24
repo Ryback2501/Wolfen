@@ -72,6 +72,9 @@ class FakeWindow final : public engine::platform::Window {
     void switchFullscreen() override {
         ++record_->fullscreenSwitches;
     }
+    [[nodiscard]] std::string screenName() const override {
+        return {};
+    }
     [[nodiscard]] engine::platform::NativeWindow nativeWindow() const override {
         return {};
     }

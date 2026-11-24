@@ -3,7 +3,9 @@
 
 #include "app/graphics_system.hpp"
 
+#include <filesystem>
 #include <iosfwd>
+#include <optional>
 #include <span>
 #include <string_view>
 
@@ -13,7 +15,10 @@ namespace wolfen::game {
 // options by itself, and starts the game only when there is a game to play.
 class Launcher {
   public:
-    Launcher(std::ostream& out, std::ostream& err, engine::app::GraphicsSystem& graphics);
+    // gameFolder: the folder that holds the game's executable, where the settings file is kept;
+    // nullopt when the system cannot say where it is.
+    Launcher(std::ostream& out, std::ostream& err, engine::app::GraphicsSystem& graphics,
+             const std::optional<std::filesystem::path>& gameFolder);
 
     // Handles the given start options (without the program's name); returns the program's exit
     // code.

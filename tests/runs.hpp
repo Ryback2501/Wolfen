@@ -57,7 +57,7 @@ class GameRun final : public RunOutput {
     // window mode.
     GameRun(FakeGraphicsSystem& graphics, std::optional<engine::render::Backend> backend,
             engine::platform::WindowMode windowMode = engine::platform::WindowMode::Windowed)
-        : outcome_{watchedGame(graphics).run(backend, windowMode)} {}
+        : outcome_{watchedGame(graphics).run(backend, windowMode, {})} {}
 
     [[nodiscard]] game::Game::Outcome outcome() const {
         return outcome_;
@@ -82,7 +82,7 @@ class LauncherRun final : public RunOutput {
 
     // args: the words after the program's name.
     LauncherRun(FakeGraphicsSystem& graphics, std::initializer_list<std::string_view> args)
-        : exitCode_{game::Launcher{outStream(), errStream(), graphics}.run(
+        : exitCode_{game::Launcher{outStream(), errStream(), graphics, std::nullopt}.run(
               std::vector<std::string_view>{args})} {}
 
     // words: the program's name and the words after it, for example {"wolfen", "--version"}.
@@ -98,7 +98,8 @@ class LauncherRun final : public RunOutput {
         }
         argv.push_back(nullptr);
         const int argc = static_cast<int>(copies.size());
-        exitCode_ = game::Launcher{outStream(), errStream(), graphics}.run(argc, argv.data());
+        exitCode_ =
+            game::Launcher{outStream(), errStream(), graphics, std::nullopt}.run(argc, argv.data());
     }
 
     [[nodiscard]] int exitCode() const {

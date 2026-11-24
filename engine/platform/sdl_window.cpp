@@ -174,6 +174,10 @@ void SdlWindow::leaveFullscreen() {
     SDL_SyncWindow(window_);
 }
 
+std::string SdlWindow::screenName() const {
+    return {};
+}
+
 NativeWindow SdlWindow::nativeWindow() const {
     const SDL_PropertiesID properties = SDL_GetWindowProperties(window_);
 #ifdef _WIN32

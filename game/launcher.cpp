@@ -4,6 +4,7 @@
 #include "game.hpp"
 
 #include <cstddef>
+#include <filesystem>
 #include <optional>
 #include <ostream>
 #include <span>
@@ -12,7 +13,8 @@
 
 namespace wolfen::game {
 
-Launcher::Launcher(std::ostream& out, std::ostream& err, engine::app::GraphicsSystem& graphics)
+Launcher::Launcher(std::ostream& out, std::ostream& err, engine::app::GraphicsSystem& graphics,
+                   const std::optional<std::filesystem::path>& /*gameFolder*/)
     : out_{&out}, err_{&err}, graphics_{&graphics} {}
 
 int Launcher::run(std::span<const std::string_view> args) {
@@ -35,7 +37,7 @@ int Launcher::run(std::span<const std::string_view> args) {
 
     const std::optional<engine::render::Backend> backend = commandLine.backend();
     Game game{*out_, *err_, *graphics_};
-    switch (game.run(backend, commandLine.windowMode())) {
+    switch (game.run(backend, commandLine.windowMode(), {})) {
     case Game::Outcome::Ended:
         return 0;
     case Game::Outcome::ChosenRendererFailed:

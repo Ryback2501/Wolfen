@@ -8,6 +8,7 @@
 #include <optional>
 #include <ostream>
 #include <string>
+#include <string_view>
 
 namespace wolfen::game {
 
@@ -26,17 +27,24 @@ std::string Game::name() {
 }
 
 Game::Outcome Game::run() {
-    return run(std::nullopt, engine::platform::WindowMode::Windowed);
+    return run(std::nullopt, engine::platform::WindowMode::Windowed, {});
+}
+
+const std::string& Game::screenAtQuit() const {
+    return screenAtQuit_;
 }
 
 Game::Outcome Game::run(std::optional<engine::render::Backend> backend,
-                        engine::platform::WindowMode windowMode) {
+                        engine::platform::WindowMode windowMode, std::string_view /*screen*/) {
     const std::string title = name();
     *out_ << title << '\n' << std::flush; // flushed, so it shows before the window opens
     try {
         // Declared in this order so the renderer is destroyed before the window it draws into.
-        const auto window = graphics_->openWindow(
-            {.title = title, .size = windowSize, .resizable = true, .mode = windowMode});
+        const auto window = graphics_->openWindow({.title = title,
+                                                   .size = windowSize,
+                                                   .resizable = true,
+                                                   .mode = windowMode,
+                                                   .screen = {}});
         std::unique_ptr<engine::render::Renderer> renderer;
         try {
             renderer = graphics_->startRenderer(*window, backend);
