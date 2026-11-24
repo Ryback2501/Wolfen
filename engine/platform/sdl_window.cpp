@@ -211,9 +211,8 @@ void SdlWindow::leaveFullscreen() {
 }
 
 Screen SdlWindow::screen() const {
-    const SDL_DisplayID screen = SDL_GetDisplayForWindow(window_);
-    const char* name = screen == 0 ? nullptr : SDL_GetDisplayName(screen);
-    return {.name = name == nullptr ? std::string{} : std::string{name}, .position = std::nullopt};
+    const SDL_DisplayID display = SDL_GetDisplayForWindow(window_);
+    return display == 0 ? Screen{} : screenOf(display);
 }
 
 NativeWindow SdlWindow::nativeWindow() const {

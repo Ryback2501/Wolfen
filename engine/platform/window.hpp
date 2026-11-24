@@ -34,10 +34,10 @@ struct WindowSettings {
     Size size; // in a window; for Fullscreen, the size it gets when it first leaves fullscreen
     bool resizable{true};
     WindowMode mode{WindowMode::Windowed};
-    // The screen to open on, centred there or covering it: the first connected screen with this
-    // name; an empty name, or one no connected screen has, means the primary screen. Where the
-    // system places windows itself (Linux under Wayland), a window may open elsewhere, and nothing
-    // is reported.
+    // The screen to open on, centred there or covering it: the connected screen with this name and
+    // position, or else the first one with this name; an empty name, or one no connected screen
+    // has, means the primary screen. Where the system places windows itself (Linux under Wayland),
+    // a window may open elsewhere, and nothing is reported.
     Screen screen;
 };
 
