@@ -133,9 +133,9 @@ std::string availableList(std::span<const Backend> available) {
 
 } // namespace
 
+// The software option is read first, because it changes how the renderer option is read wherever
+// that comes. It can never be another option's value, as it starts with '-'.
 CommandLine::CommandLine(std::span<const std::string_view> args, std::span<const Backend> available)
-    // Read first, because it changes how the renderer option is read wherever that comes. It can
-    // never be another option's value, as it starts with '-'.
     : isSoftwareAsked_{contains(args, softwareRow.name)} {
     // Every word is read, and only the first error, reading left to right, is kept. The help
     // option, then the version option, win over everything else wherever they are.
