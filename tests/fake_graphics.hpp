@@ -5,7 +5,9 @@
 #include "core/colour.hpp"
 #include "core/size.hpp"
 #include "core/startup_error.hpp"
+#include "render/renderer_name.hpp"
 
+#include <algorithm>
 #include <deque>
 #include <memory>
 #include <optional>
@@ -24,6 +26,7 @@ struct GraphicsRecord {
     std::vector<engine::Colour> frames;
     std::vector<engine::Size> resizes;
     std::optional<engine::render::Backend> requestedBackend; // as asked of the last startRenderer()
+    std::vector<engine::render::Backend> cpuTries; // every startCpuRenderer() call, in order
     int waits{};                        // how many times the game slept until the window had events
     int fullscreenSwitches{};           // how many times the game switched fullscreen on or off
     std::string outputWhenWindowOpened; // what the game had printed when it opened the window
@@ -91,8 +94,8 @@ class FakeWindow final : public engine::platform::Window {
 // A renderer that draws nothing and records every frame.
 class FakeRenderer final : public engine::render::Renderer {
   public:
-    FakeRenderer(GraphicsRecord& record, std::string name)
-        : record_{&record}, name_{std::move(name)} {}
+    FakeRenderer(GraphicsRecord& record, std::string name, bool drawsWithCpu)
+        : record_{&record}, name_{std::move(name)}, drawsWithCpu_{drawsWithCpu} {}
     FakeRenderer(const FakeRenderer&) = delete;
     FakeRenderer& operator=(const FakeRenderer&) = delete;
     FakeRenderer(FakeRenderer&&) = delete;
@@ -104,6 +107,9 @@ class FakeRenderer final : public engine::render::Renderer {
     [[nodiscard]] std::string_view name() const override {
         return name_;
     }
+    [[nodiscard]] bool drawsWithCpu() const override {
+        return drawsWithCpu_;
+    }
     void resize(engine::Size pixelSize) override {
         record_->resizes.push_back(pixelSize);
     }
@@ -114,6 +120,7 @@ class FakeRenderer final : public engine::render::Renderer {
   private:
     GraphicsRecord* record_;
     std::string name_;
+    bool drawsWithCpu_;
 };
 
 // A graphics system with no screen. Each test sets what it should do, then runs the game with it.
@@ -124,6 +131,9 @@ class FakeGraphicsSystem final : public engine::app::GraphicsSystem {
     engine::Size pixelSize{.width = 1280, .height = 720};          // when the window opens
     engine::Size sizeAfterResize{.width = 1280, .height = 720}; // from the first Resized event on
     std::string rendererName{"Fake"};
+    bool rendererDrawsWithCpu{false}; // whether startRenderer() ends up on a CPU device
+    // The renderers that can start on a CPU device; startCpuRenderer() fails for the others.
+    std::vector<engine::render::Backend> cpuBackends;
     // The screen the window is on, as the system knows it.
     engine::platform::Screen screen{.name = "Fake screen", .position = std::nullopt};
     std::optional<std::string> windowFailure;   // when set, openWindow() fails with it
@@ -158,7 +168,19 @@ class FakeGraphicsSystem final : public engine::app::GraphicsSystem {
         if (rendererFailure) {
             throw engine::StartupError{*rendererFailure};
         }
-        return std::make_unique<FakeRenderer>(record, rendererName);
+        return std::make_unique<FakeRenderer>(record, rendererName, rendererDrawsWithCpu);
+    }
+
+    std::unique_ptr<engine::render::Renderer>
+    startCpuRenderer(engine::platform::Window& /*window*/,
+                     engine::render::Backend backend) override {
+        record.steps.emplace_back("start CPU renderer");
+        record.cpuTries.push_back(backend);
+        if (std::ranges::find(cpuBackends, backend) == cpuBackends.end()) {
+            throw engine::StartupError{"no CPU device"};
+        }
+        return std::make_unique<FakeRenderer>(
+            record, std::string{engine::render::RendererName::display(backend, "")}, true);
     }
 };
 

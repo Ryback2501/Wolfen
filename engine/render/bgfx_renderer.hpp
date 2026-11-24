@@ -5,11 +5,18 @@
 #include "render/backend.hpp"
 #include "render/renderer.hpp"
 
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <vector>
 
 namespace wolfen::engine::render {
+
+// Which device a renderer draws on.
+enum class DeviceChoice : std::uint8_t {
+    Best, // the one bgfx picks, usually the graphics card
+    Cpu,  // a CPU device (a software rasterizer) and nothing else
+};
 
 // A renderer built on bgfx, drawing into one window on the calling thread. bgfx is a single
 // global system, so only one BgfxRenderer may exist at a time.
@@ -20,9 +27,11 @@ class BgfxRenderer final : public Renderer {
     static std::vector<Backend> availableBackends();
 
     // Starts the given backend and no other one; without one, lets bgfx pick the best backend
-    // for this computer, falling back to another if it fails. Throws StartupError when it cannot.
+    // for this computer, falling back to another if it fails. On DeviceChoice::Cpu, a start on
+    // anything but a CPU device counts as failed. Throws StartupError when it cannot start.
     explicit BgfxRenderer(const platform::Window& window,
-                          std::optional<Backend> backend = std::nullopt);
+                          std::optional<Backend> backend = std::nullopt,
+                          DeviceChoice device = DeviceChoice::Best);
     BgfxRenderer(const BgfxRenderer&) = delete;
     BgfxRenderer& operator=(const BgfxRenderer&) = delete;
     BgfxRenderer(BgfxRenderer&&) = delete;
@@ -30,11 +39,13 @@ class BgfxRenderer final : public Renderer {
     ~BgfxRenderer() override;
 
     [[nodiscard]] std::string_view name() const override;
+    [[nodiscard]] bool drawsWithCpu() const override;
     void resize(Size pixelSize) override;
     void drawFrame(Colour background) override;
 
   private:
     std::string name_;
+    bool drawsWithCpu_{};
 };
 
 } // namespace wolfen::engine::render

@@ -4,11 +4,14 @@
 #include "core/startup_error.hpp"
 #include "core/version.hpp"
 
+#include <algorithm>
+#include <array>
 #include <memory>
 #include <optional>
 #include <ostream>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace wolfen::game {
 
@@ -29,6 +32,9 @@ namespace {
 constexpr Size windowSize{.width = 1280, .height = 720};
 constexpr Colour background{.red = 0x64, .green = 0x95, .blue = 0xED, .alpha = 0xFF};
 
+// The renderers that can draw with the CPU, in the order runOnCpu() tries them.
+constexpr std::array cpuRenderers{Backend::Vulkan, Backend::Direct3D11, Backend::Direct3D12};
+
 } // namespace
 
 Game::Game(std::ostream& out, std::ostream& err, GraphicsSystem& graphics)
@@ -48,32 +54,65 @@ const Screen& Game::screenAtQuit() const {
 
 Game::Outcome Game::run(std::optional<Backend> backend, WindowMode windowMode,
                         const Screen& screen) {
+    const std::array<RendererStart, 1> starts{
+        [this, backend](Window& window) -> std::unique_ptr<Renderer> {
+            try {
+                return graphics_->startRenderer(window, backend);
+            } catch (const StartupError&) {
+                if (!backend) {
+                    throw; // the best renderer for this computer: the game could not start
+                }
+                return nullptr;
+            }
+        }};
+    return runWith(windowMode, screen, starts, Outcome::ChosenRendererFailed);
+}
+
+Game::Outcome Game::runOnCpu(WindowMode windowMode, const Screen& screen) {
+    const std::vector<Backend> available = graphics_->availableBackends();
+    std::vector<RendererStart> starts;
+    for (const Backend backend : cpuRenderers) {
+        if (std::ranges::find(available, backend) == available.end()) {
+            continue;
+        }
+        starts.emplace_back([this, backend](Window& window) -> std::unique_ptr<Renderer> {
+            try {
+                return graphics_->startCpuRenderer(window, backend);
+            } catch (const StartupError&) {
+                return nullptr; // no CPU device for this one: the next one is tried
+            }
+        });
+    }
+    return runWith(windowMode, screen, starts, Outcome::NoCpuRenderer);
+}
+
+Game::Outcome Game::runWith(WindowMode windowMode, const Screen& screen,
+                            std::span<const RendererStart> starts, Outcome whenNoRenderer) {
     const std::string title = name();
     *out_ << title << '\n' << std::flush; // flushed, so it shows before the window opens
     try {
-        // Declared in this order so the renderer is destroyed before the window it draws into.
-        const auto window = graphics_->openWindow({.title = title,
-                                                   .size = windowSize,
-                                                   .resizable = true,
-                                                   .mode = windowMode,
-                                                   .screen = screen});
-        std::unique_ptr<Renderer> renderer;
-        try {
-            renderer = graphics_->startRenderer(*window, backend);
-        } catch (const StartupError&) {
-            if (!backend) {
-                throw;
+        for (const RendererStart& startRenderer : starts) {
+            // Declared in this order so the renderer is destroyed before the window it draws into.
+            const auto window = graphics_->openWindow({.title = title,
+                                                       .size = windowSize,
+                                                       .resizable = true,
+                                                       .mode = windowMode,
+                                                       .screen = screen});
+            const std::unique_ptr<Renderer> renderer = startRenderer(*window);
+            if (!renderer) {
+                continue; // its window closes here, before the next try opens a new one
             }
-            return Outcome::ChosenRendererFailed;
+            const std::string_view cpu = renderer->drawsWithCpu() ? ", software" : "";
+            window->setTitle(title + " (" + std::string{renderer->name()} + std::string{cpu} + ")");
+            play(*window, *renderer);
+            screenAtQuit_ = window->screen(); // while the window is still open
+            return Outcome::Ended;
         }
-        window->setTitle(title + " (" + std::string{renderer->name()} + ")");
-        play(*window, *renderer);
-        screenAtQuit_ = window->screen(); // while the window is still open
     } catch (const StartupError& error) {
         *err_ << "Wolfen could not start: " << error.what() << '\n';
         return Outcome::CouldNotStart;
     }
-    return Outcome::Ended;
+    return whenNoRenderer;
 }
 
 void Game::play(Window& window, Renderer& renderer) {

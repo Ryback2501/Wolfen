@@ -7,9 +7,12 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <algorithm>
+#include <cstddef>
 #include <filesystem>
 #include <initializer_list>
 #include <optional>
+#include <ranges>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -26,8 +29,8 @@ using wolfen::tests::versionLine;
 
 namespace {
 
-// The usage text approved for #3, as changed by #4 (the --fullscreen line, and no keys), with the
-// given list of available renderers.
+// The usage text approved for #3, as changed by #4 (the --fullscreen line, and no keys) and #8 (the
+// --software line), with the given list of available renderers.
 std::string usage(std::string_view available) {
     return "Usage: wolfen [options]\n"
            "\n"
@@ -36,6 +39,7 @@ std::string usage(std::string_view available) {
            std::string{available} +
            "\n"
            "  --fullscreen       Start in borderless fullscreen.\n"
+           "  --software         Draw with the CPU instead of the graphics card.\n"
            "  --help             Show this help and exit.\n"
            "  --version          Show the version and exit.\n";
 }
@@ -123,6 +127,43 @@ void requireSettingsLeftAlone(std::initializer_list<std::string_view> args) {
     FakeGraphicsSystem again;
     const LauncherRun runAgain{again, noFile.path(), args};
     REQUIRE_FALSE(noFile.has("settings.ini"));
+}
+
+// The window title with the given renderer text: "Wolfen vX.Y.Z (<renderer>)".
+std::string titleWith(std::string_view renderer) {
+    std::string title = versionLine();
+    title.pop_back(); // the line's newline
+    return title + " (" + std::string{renderer} + ")";
+}
+
+// The number of times the steps hold the given one.
+std::ptrdiff_t countOf(const std::vector<std::string>& steps, std::string_view step) {
+    return std::ranges::count(steps, step);
+}
+
+// A start with the given options on a computer where only Vulkan can draw with the CPU: the game
+// draws with the CPU on Vulkan, never starts a renderer on the graphics card, says so in the title,
+// and exits with 0.
+void requireSoftwareStart(std::initializer_list<std::string_view> args) {
+    FakeGraphicsSystem graphics;
+    graphics.cpuBackends = {Backend::Vulkan};
+    const LauncherRun run{graphics, args};
+    REQUIRE(run.err().empty());
+    REQUIRE(graphics.record.cpuTries == std::vector<Backend>{Backend::Vulkan});
+    REQUIRE(countOf(graphics.record.steps, "start renderer") == 0);
+    REQUIRE(graphics.record.titles == std::vector<std::string>{titleWith("Vulkan, software")});
+    REQUIRE(run.exitCode() == 0);
+}
+
+// A start with --software where no renderer can draw with the CPU: one message, no window left
+// open, exit 1.
+void requireNoCpuRenderer(FakeGraphicsSystem& graphics) {
+    const LauncherRun run{graphics, {"--software"}};
+    REQUIRE(run.err() == "No renderer can draw with the CPU on this computer.\n");
+    REQUIRE(countOf(graphics.record.steps, "open window") ==
+            countOf(graphics.record.steps, "close window"));
+    REQUIRE(countOf(graphics.record.steps, "start renderer") == 0);
+    REQUIRE(run.exitCode() == 1);
 }
 
 } // namespace
@@ -454,5 +495,135 @@ TEST_CASE("A screen whose position the system cannot give is saved with an empty
     graphics.screen = {.name = "HDMI-2", .position = std::nullopt};
     const LauncherRun run{graphics, folder.path(), {}};
     REQUIRE(folder.text("settings.ini") == "screen=HDMI-2\nscreen_position=\n");
+    REQUIRE(run.exitCode() == 0);
+}
+
+TEST_CASE("The usage lists --software right after --fullscreen", "[options][help][software]") {
+    FakeGraphicsSystem graphics;
+    const LauncherRun run{graphics, {"--help"}};
+    REQUIRE(run.out() == usageHere);
+    REQUIRE(run.exitCode() == 0);
+}
+
+TEST_CASE("With --software the game draws with the CPU, and the title says so", "[software]") {
+    requireSoftwareStart({"--software"});
+}
+
+TEST_CASE("With --software the renderers that can draw with the CPU are tried in the order Vulkan, "
+          "Direct3D 11, Direct3D 12, each in a window of its own",
+          "[software]") {
+    FakeGraphicsSystem graphics;
+    graphics.available = {Backend::Direct3D12, Backend::OpenGL, Backend::Direct3D11,
+                          Backend::Vulkan};
+    graphics.cpuBackends = {Backend::Direct3D12};
+    const LauncherRun run{graphics, {"--software"}};
+    REQUIRE(graphics.record.cpuTries ==
+            std::vector<Backend>{Backend::Vulkan, Backend::Direct3D11, Backend::Direct3D12});
+    // A failed try closes its window: a renderer on another graphics API never reuses it.
+    REQUIRE(graphics.record.steps == std::vector<std::string>{"open window", "start CPU renderer",
+                                                              "close window", "open window",
+                                                              "start CPU renderer", "close window",
+                                                              "open window", "start CPU renderer",
+                                                              "close renderer", "close window"});
+    REQUIRE(graphics.record.titles == std::vector<std::string>{titleWith("Direct3D 12, software")});
+    REQUIRE(run.err().empty());
+    REQUIRE(run.exitCode() == 0);
+
+    // Only the renderers available on this computer are tried.
+    FakeGraphicsSystem windows;
+    windows.available = {Backend::OpenGL, Backend::Direct3D11};
+    windows.cpuBackends = {Backend::Direct3D11};
+    const LauncherRun windowsRun{windows, {"--software"}};
+    REQUIRE(windows.record.cpuTries == std::vector<Backend>{Backend::Direct3D11});
+    REQUIRE(windows.record.titles == std::vector<std::string>{titleWith("Direct3D 11, software")});
+}
+
+TEST_CASE("With --software, --renderer is ignored completely", "[software][renderer]") {
+    requireSoftwareStart({"--renderer", "opengl", "--software"});
+    requireSoftwareStart({"--software", "--renderer", "opengl"});
+    requireSoftwareStart({"--renderer", "foo", "--software"});
+    requireSoftwareStart({"--renderer", "--software"});
+    requireSoftwareStart({"--software", "--renderer"});
+    requireSoftwareStart({"--renderer", "vulkan", "--renderer", "opengl", "--software"});
+}
+
+TEST_CASE("The --software option combines with --fullscreen in any order",
+          "[software][fullscreen]") {
+    requireSoftwareStart({"--software", "--fullscreen"});
+    requireSoftwareStart({"--fullscreen", "--software"});
+    FakeGraphicsSystem graphics;
+    graphics.cpuBackends = {Backend::Vulkan};
+    graphics.events = {{WindowEvent::FullscreenKeyPressed}, {}};
+    const LauncherRun run{graphics, {"--fullscreen", "--software"}};
+    REQUIRE(graphics.record.windowSettings.mode == WindowMode::Fullscreen);
+    REQUIRE(graphics.record.fullscreenSwitches == 1);
+    REQUIRE(graphics.record.titles == std::vector<std::string>{titleWith("Vulkan, software")});
+}
+
+TEST_CASE("The --software option given twice", "[software][options]") {
+    FakeGraphicsSystem graphics;
+    requireOptionError(graphics, {"--software", "--software"}, "Option '--software' given twice");
+}
+
+TEST_CASE(
+    "With --software, an unknown option is still an error, and --help and --version still win",
+    "[software][options]") {
+    FakeGraphicsSystem graphics;
+    requireOptionError(graphics, {"--software", "--bogus"}, "Unknown option '--bogus'");
+
+    FakeGraphicsSystem helpGraphics;
+    const LauncherRun help{helpGraphics, {"--help", "--software"}};
+    REQUIRE(help.out() == usageHere);
+    REQUIRE(help.exitCode() == 0);
+
+    FakeGraphicsSystem versionGraphics;
+    const LauncherRun version{versionGraphics, {"--version", "--software"}};
+    REQUIRE(version.out() == versionLine());
+    REQUIRE(version.exitCode() == 0);
+}
+
+TEST_CASE("When no renderer can draw with the CPU: one message, no window left open, exit 1",
+          "[software]") {
+    FakeGraphicsSystem noneAvailable; // as on macOS: no renderer that can draw with the CPU
+    noneAvailable.available = {Backend::OpenGL, Backend::Metal};
+    requireNoCpuRenderer(noneAvailable);
+    REQUIRE(noneAvailable.record.cpuTries.empty());
+
+    FakeGraphicsSystem noneStarts; // as on Linux without a CPU Vulkan driver
+    noneStarts.available = {Backend::Vulkan, Backend::OpenGL};
+    requireNoCpuRenderer(noneStarts);
+    REQUIRE(noneStarts.record.cpuTries == std::vector<Backend>{Backend::Vulkan});
+}
+
+TEST_CASE("Without --software, a renderer on the graphics card has no ', software' in the title",
+          "[software]") {
+    FakeGraphicsSystem graphics;
+    graphics.rendererName = "Vulkan";
+    const LauncherRun run{graphics, {}};
+    REQUIRE(graphics.record.cpuTries.empty());
+    REQUIRE(graphics.record.titles == std::vector<std::string>{titleWith("Vulkan")});
+}
+
+TEST_CASE("Without --software, a renderer that ends up on a CPU device says so in the title",
+          "[software]") {
+    FakeGraphicsSystem graphics;
+    graphics.rendererName = "Vulkan";
+    graphics.rendererDrawsWithCpu = true; // as on a virtual machine with no graphics card
+    const LauncherRun run{graphics, {}};
+    REQUIRE(graphics.record.titles == std::vector<std::string>{titleWith("Vulkan, software")});
+    REQUIRE(run.exitCode() == 0);
+}
+
+TEST_CASE("With --software the saved screen is used, and saved again after a normal quit",
+          "[software][settings]") {
+    const TempFolder folder;
+    folder.write("settings.ini", "screen=HDMI-2\nscreen_position=1920,0\n");
+    FakeGraphicsSystem graphics;
+    graphics.cpuBackends = {Backend::Vulkan};
+    graphics.screen = {.name = "DP-1", .position = Point{.x = 0, .y = 0}};
+    const LauncherRun run{graphics, folder.path(), {"--software"}};
+    REQUIRE(graphics.record.windowSettings.screen ==
+            Screen{.name = "HDMI-2", .position = Point{.x = 1920, .y = 0}});
+    REQUIRE(folder.text("settings.ini") == "screen=DP-1\nscreen_position=0,0\n");
     REQUIRE(run.exitCode() == 0);
 }

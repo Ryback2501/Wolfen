@@ -12,6 +12,8 @@ class SdlBgfxSystem final : public GraphicsSystem {
     [[nodiscard]] std::vector<render::Backend> availableBackends() const override;
     std::unique_ptr<render::Renderer>
     startRenderer(platform::Window& window, std::optional<render::Backend> backend) override;
+    std::unique_ptr<render::Renderer> startCpuRenderer(platform::Window& window,
+                                                       render::Backend backend) override;
 };
 
 } // namespace wolfen::engine::app

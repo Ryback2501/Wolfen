@@ -17,7 +17,7 @@ using engine::render::Backend;
 namespace {
 
 // What a start option does once it is read.
-enum class Option : std::uint8_t { Renderer, Fullscreen, Help, Version };
+enum class Option : std::uint8_t { Renderer, Fullscreen, Software, Help, Version };
 
 // One start option: everything the reading and the usage need to know about it.
 struct OptionRow {
@@ -32,7 +32,7 @@ struct OptionRow {
 };
 
 // Every start option, in the order the usage lists them.
-constexpr std::array<OptionRow, 4> options{{
+constexpr std::array<OptionRow, 5> options{{
     {.option = Option::Renderer,
      .name = "--renderer",
      .valueShown = "<name>",
@@ -43,6 +43,11 @@ constexpr std::array<OptionRow, 4> options{{
      .valueShown = "",
      .valueNeeded = "",
      .help = "Start in borderless fullscreen."},
+    {.option = Option::Software,
+     .name = "--software",
+     .valueShown = "",
+     .valueNeeded = "",
+     .help = "Draw with the CPU instead of the graphics card."},
     {.option = Option::Help,
      .name = "--help",
      .valueShown = "",
@@ -103,6 +108,11 @@ constexpr const Row* firstRow(const std::array<Row, rowCount>& table, const Matc
 constexpr const OptionRow& helpRow =
     *firstRow(options, [](const OptionRow& row) { return row.option == Option::Help; });
 
+// The software option's row: with it, the renderer option is ignored. Worked out while compiling,
+// like the help row.
+constexpr const OptionRow& softwareRow =
+    *firstRow(options, [](const OptionRow& row) { return row.option == Option::Software; });
+
 // Whether the list holds the item.
 template <typename List>
 bool contains(const List& list, const std::ranges::range_value_t<List>& item) {
@@ -123,8 +133,10 @@ std::string availableList(std::span<const Backend> available) {
 
 } // namespace
 
-CommandLine::CommandLine(std::span<const std::string_view> args,
-                         std::span<const Backend> available) {
+// The software option is read first, because it changes how the renderer option is read wherever
+// that comes. It can never be another option's value, as it starts with '-'.
+CommandLine::CommandLine(std::span<const std::string_view> args, std::span<const Backend> available)
+    : isSoftwareAsked_{contains(args, softwareRow.name)} {
     // Every word is read, and only the first error, reading left to right, is kept. The help
     // option, then the version option, win over everything else wherever they are.
     std::optional<Action> action;
@@ -140,6 +152,13 @@ CommandLine::CommandLine(std::span<const std::string_view> args,
             options, [word](const OptionRow& candidate) { return candidate.name == word; });
         if (row == nullptr) {
             fail("Unknown option '" + std::string{word} + "'");
+            continue;
+        }
+        if (row->option == Option::Renderer && isSoftwareAsked_) {
+            // Ignored completely, with its value if one follows: nothing about it is checked.
+            if (valueFollows(i)) {
+                ++i;
+            }
             continue;
         }
         if (contains(seen, row->option)) {
@@ -167,6 +186,8 @@ CommandLine::CommandLine(std::span<const std::string_view> args,
         case Option::Fullscreen:
             windowMode_ = WindowMode::Fullscreen;
             break;
+        case Option::Software:
+            break; // already read before the loop
         case Option::Help:
             action = Action::Help;
             break;
@@ -209,6 +230,10 @@ CommandLine::Action CommandLine::action() const {
 
 std::optional<Backend> CommandLine::backend() const {
     return backend_;
+}
+
+bool CommandLine::isSoftwareAsked() const {
+    return isSoftwareAsked_;
 }
 
 WindowMode CommandLine::windowMode() const {

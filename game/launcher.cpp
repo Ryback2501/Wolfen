@@ -50,13 +50,19 @@ int Launcher::run(std::span<const std::string_view> args) {
 
     const std::optional<Backend> backend = commandLine.backend();
     Game game{*out_, *err_, *graphics_};
-    switch (game.run(backend, commandLine.windowMode(), screen)) {
+    const Game::Outcome outcome = commandLine.isSoftwareAsked()
+                                      ? game.runOnCpu(commandLine.windowMode(), screen)
+                                      : game.run(backend, commandLine.windowMode(), screen);
+    switch (outcome) {
     case Game::Outcome::Ended:
         saveScreen(settingsFile, game.screenAtQuit());
         return 0;
     case Game::Outcome::ChosenRendererFailed:
         *err_ << "Renderer '" << CommandLine::optionName(backend.value_or(Backend::Other))
               << "' could not be started on this computer.\n";
+        return 1;
+    case Game::Outcome::NoCpuRenderer:
+        *err_ << "No renderer can draw with the CPU on this computer.\n";
         return 1;
     case Game::Outcome::CouldNotStart:
         break; // the game has already said why
