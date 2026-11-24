@@ -26,6 +26,7 @@ class SdlWindow final : public Window {
     [[nodiscard]] Size pixelSize() const override;
     void setTitle(std::string_view title) override;
     void switchFullscreen() override;
+    [[nodiscard]] Screen screen() const override;
     [[nodiscard]] NativeWindow nativeWindow() const override;
 
   private:

@@ -35,9 +35,10 @@ class FakeWindow final : public engine::platform::Window {
   public:
     FakeWindow(GraphicsRecord& record,
                std::deque<std::vector<engine::platform::WindowEvent>> events,
-               engine::Size pixelSize, engine::Size sizeAfterResize)
+               engine::Size pixelSize, engine::Size sizeAfterResize,
+               engine::platform::Screen screen = {})
         : record_{&record}, events_{std::move(events)}, pixelSize_{pixelSize},
-          sizeAfterResize_{sizeAfterResize} {}
+          sizeAfterResize_{sizeAfterResize}, screen_{std::move(screen)} {}
     FakeWindow(const FakeWindow&) = delete;
     FakeWindow& operator=(const FakeWindow&) = delete;
     FakeWindow(FakeWindow&&) = delete;
@@ -72,6 +73,9 @@ class FakeWindow final : public engine::platform::Window {
     void switchFullscreen() override {
         ++record_->fullscreenSwitches;
     }
+    [[nodiscard]] engine::platform::Screen screen() const override {
+        return screen_;
+    }
     [[nodiscard]] engine::platform::NativeWindow nativeWindow() const override {
         return {};
     }
@@ -81,6 +85,7 @@ class FakeWindow final : public engine::platform::Window {
     std::deque<std::vector<engine::platform::WindowEvent>> events_;
     engine::Size pixelSize_;
     engine::Size sizeAfterResize_;
+    engine::platform::Screen screen_;
 };
 
 // A renderer that draws nothing and records every frame.
@@ -119,6 +124,8 @@ class FakeGraphicsSystem final : public engine::app::GraphicsSystem {
     engine::Size pixelSize{.width = 1280, .height = 720};          // when the window opens
     engine::Size sizeAfterResize{.width = 1280, .height = 720}; // from the first Resized event on
     std::string rendererName{"Fake"};
+    // The screen the window is on, as the system knows it.
+    engine::platform::Screen screen{.name = "Fake screen", .position = std::nullopt};
     std::optional<std::string> windowFailure;   // when set, openWindow() fails with it
     std::optional<std::string> rendererFailure; // when set, startRenderer() fails with it
     std::vector<engine::render::Backend> available{engine::render::Backend::Vulkan,
@@ -139,7 +146,8 @@ class FakeGraphicsSystem final : public engine::app::GraphicsSystem {
         if (windowFailure) {
             throw engine::StartupError{*windowFailure};
         }
-        return std::make_unique<FakeWindow>(record, std::move(events), pixelSize, sizeAfterResize);
+        return std::make_unique<FakeWindow>(record, std::move(events), pixelSize, sizeAfterResize,
+                                            screen);
     }
 
     std::unique_ptr<engine::render::Renderer>

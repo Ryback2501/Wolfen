@@ -7,7 +7,9 @@
 #include "launcher.hpp"
 #include "platform/window.hpp"
 #include "render/backend.hpp"
+#include "temp_folder.hpp"
 
+#include <filesystem>
 #include <initializer_list>
 #include <optional>
 #include <sstream>
@@ -57,7 +59,7 @@ class GameRun final : public RunOutput {
     // window mode.
     GameRun(FakeGraphicsSystem& graphics, std::optional<engine::render::Backend> backend,
             engine::platform::WindowMode windowMode = engine::platform::WindowMode::Windowed)
-        : outcome_{watchedGame(graphics).run(backend, windowMode)} {}
+        : outcome_{watchedGame(graphics).run(backend, windowMode, {})} {}
 
     [[nodiscard]] game::Game::Outcome outcome() const {
         return outcome_;
@@ -74,7 +76,8 @@ class GameRun final : public RunOutput {
     game::Game::Outcome outcome_;
 };
 
-// Runs the launcher once with the given start options and fake graphics system.
+// Runs the launcher once with the given start options and fake graphics system. Unless a game
+// folder is given, the game's folder is a new temporary one, deleted after the run.
 class LauncherRun final : public RunOutput {
   public:
     // Says that the words start with the program's name, as the operating system gives them.
@@ -82,8 +85,14 @@ class LauncherRun final : public RunOutput {
 
     // args: the words after the program's name.
     LauncherRun(FakeGraphicsSystem& graphics, std::initializer_list<std::string_view> args)
-        : exitCode_{game::Launcher{outStream(), errStream(), graphics}.run(
-              std::vector<std::string_view>{args})} {}
+        : exitCode_{launcher(graphics, ownFolder_.emplace().path())
+                        .run(std::vector<std::string_view>{args})} {}
+
+    // gameFolder: where the settings file is kept; nullopt when the system cannot say.
+    LauncherRun(FakeGraphicsSystem& graphics,
+                const std::optional<std::filesystem::path>& gameFolder,
+                std::initializer_list<std::string_view> args)
+        : exitCode_{launcher(graphics, gameFolder).run(std::vector<std::string_view>{args})} {}
 
     // words: the program's name and the words after it, for example {"wolfen", "--version"}.
     LauncherRun(FakeGraphicsSystem& graphics, ProgramNameFirst /*tag*/,
@@ -98,7 +107,7 @@ class LauncherRun final : public RunOutput {
         }
         argv.push_back(nullptr);
         const int argc = static_cast<int>(copies.size());
-        exitCode_ = game::Launcher{outStream(), errStream(), graphics}.run(argc, argv.data());
+        exitCode_ = launcher(graphics, ownFolder_.emplace().path()).run(argc, argv.data());
     }
 
     [[nodiscard]] int exitCode() const {
@@ -106,6 +115,15 @@ class LauncherRun final : public RunOutput {
     }
 
   private:
+    // A launcher printing to this run's streams.
+    game::Launcher launcher(FakeGraphicsSystem& graphics,
+                            const std::optional<std::filesystem::path>& gameFolder) {
+        return game::Launcher{outStream(), errStream(), graphics, gameFolder};
+    }
+
+    // The game's folder, made only for a run that is not given one. Declared first, so it can be
+    // made before the run.
+    std::optional<TempFolder> ownFolder_;
     int exitCode_{};
 };
 

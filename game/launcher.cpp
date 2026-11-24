@@ -4,16 +4,20 @@
 #include "game.hpp"
 
 #include <cstddef>
+#include <filesystem>
 #include <optional>
 #include <ostream>
 #include <span>
+#include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace wolfen::game {
 
-Launcher::Launcher(std::ostream& out, std::ostream& err, engine::app::GraphicsSystem& graphics)
-    : out_{&out}, err_{&err}, graphics_{&graphics} {}
+Launcher::Launcher(std::ostream& out, std::ostream& err, engine::app::GraphicsSystem& graphics,
+                   std::optional<std::filesystem::path> gameFolder)
+    : out_{&out}, err_{&err}, graphics_{&graphics}, gameFolder_{std::move(gameFolder)} {}
 
 int Launcher::run(std::span<const std::string_view> args) {
     const std::vector<engine::render::Backend> available = graphics_->availableBackends();
@@ -33,10 +37,19 @@ int Launcher::run(std::span<const std::string_view> args) {
         break;
     }
 
+    // Read only now, just before the window opens: the screen to open on.
+    std::optional<SettingsFile> settingsFile;
+    if (gameFolder_) {
+        settingsFile.emplace(*gameFolder_ / "settings.ini");
+    }
+    const engine::platform::Screen screen =
+        settingsFile ? settingsFile->screen() : engine::platform::Screen{};
+
     const std::optional<engine::render::Backend> backend = commandLine.backend();
     Game game{*out_, *err_, *graphics_};
-    switch (game.run(backend, commandLine.windowMode())) {
+    switch (game.run(backend, commandLine.windowMode(), screen)) {
     case Game::Outcome::Ended:
+        saveScreen(settingsFile, game.screenAtQuit());
         return 0;
     case Game::Outcome::ChosenRendererFailed:
         *err_ << "Renderer '"
@@ -47,6 +60,20 @@ int Launcher::run(std::span<const std::string_view> args) {
         break; // the game has already said why
     }
     return 1;
+}
+
+void Launcher::saveScreen(const std::optional<SettingsFile>& settingsFile,
+                          const engine::platform::Screen& screen) const {
+    if (!settingsFile) {
+        *err_ << "Warning: could not save settings: the game's folder is unknown\n";
+        return;
+    }
+    if (!settingsFile->save(screen)) {
+        // The path's own characters (UTF-8), whatever the system's code page.
+        const std::u8string path = settingsFile->path().u8string();
+        *err_ << "Warning: could not save settings to " << std::string(path.begin(), path.end())
+              << '\n';
+    }
 }
 
 int Launcher::run(int argc, char** argv) {

@@ -1,12 +1,19 @@
 #include "platform/sdl_window.hpp"
 
 #include "core/startup_error.hpp"
+#include "platform/screen_list.hpp"
 
 #include <SDL3/SDL.h>
 
 #include <bit>
+#include <cstddef>
 #include <cstdint>
+#include <memory>
+#include <span>
 #include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
 
 namespace wolfen::engine::platform {
 
@@ -53,6 +60,37 @@ void addWindowEvent(const SDL_Event& event, std::vector<WindowEvent>& events) {
     }
 }
 
+// The screen as the system knows it: its name (empty when it has none) and its top-left corner on
+// the desktop (unknown when the system cannot say).
+Screen screenOf(SDL_DisplayID display) {
+    Screen screen;
+    if (const char* name = SDL_GetDisplayName(display); name != nullptr) {
+        screen.name = name;
+    }
+    if (SDL_Rect bounds; SDL_GetDisplayBounds(display, &bounds)) {
+        screen.position = Point{.x = bounds.x, .y = bounds.y};
+    }
+    return screen;
+}
+
+// The connected screen that matches the saved one (see ScreenList), or the primary screen.
+SDL_DisplayID displayFor(const Screen& saved) {
+    int count = 0;
+    const std::unique_ptr<SDL_DisplayID, decltype(&SDL_free)> displays{SDL_GetDisplays(&count),
+                                                                       &SDL_free};
+    if (displays == nullptr) {
+        return SDL_GetPrimaryDisplay();
+    }
+    const std::span<const SDL_DisplayID> connected{displays.get(), static_cast<std::size_t>(count)};
+    std::vector<Screen> screens;
+    screens.reserve(connected.size());
+    for (const SDL_DisplayID display : connected) {
+        screens.push_back(screenOf(display));
+    }
+    const std::optional<std::size_t> index = ScreenList{std::move(screens)}.indexOf(saved);
+    return index ? connected[*index] : SDL_GetPrimaryDisplay();
+}
+
 } // namespace
 
 SdlWindow::SdlWindow(const WindowSettings& settings) {
@@ -70,7 +108,7 @@ SdlWindow::SdlWindow(const WindowSettings& settings) {
 
     const SDL_PropertiesID properties = SDL_CreateProperties();
     const auto centred =
-        static_cast<std::int64_t>(SDL_WINDOWPOS_CENTERED_DISPLAY(SDL_GetPrimaryDisplay()));
+        static_cast<std::int64_t>(SDL_WINDOWPOS_CENTERED_DISPLAY(displayFor(settings.screen)));
     SDL_SetStringProperty(properties, SDL_PROP_WINDOW_CREATE_TITLE_STRING, settings.title.c_str());
     SDL_SetNumberProperty(properties, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, settings.size.width);
     SDL_SetNumberProperty(properties, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, settings.size.height);
@@ -79,7 +117,7 @@ SdlWindow::SdlWindow(const WindowSettings& settings) {
     SDL_SetBooleanProperty(properties, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN,
                            settings.resizable);
     SDL_SetBooleanProperty(properties, SDL_PROP_WINDOW_CREATE_HIGH_PIXEL_DENSITY_BOOLEAN, true);
-    // Fullscreen covers the screen that holds the window's centre: the primary one, as the window
+    // Fullscreen covers the screen that holds the window's centre: the chosen one, as the window
     // is centred there. No fullscreen mode is ever set, so it is borderless at the screen's own
     // resolution and the screen's mode never changes.
     SDL_SetBooleanProperty(properties, SDL_PROP_WINDOW_CREATE_FULLSCREEN_BOOLEAN,
@@ -172,6 +210,11 @@ void SdlWindow::leaveFullscreen() {
         SDL_SetWindowPosition(window_, centred, centred);
     }
     SDL_SyncWindow(window_);
+}
+
+Screen SdlWindow::screen() const {
+    const SDL_DisplayID display = SDL_GetDisplayForWindow(window_);
+    return display == 0 ? Screen{} : screenOf(display);
 }
 
 NativeWindow SdlWindow::nativeWindow() const {
