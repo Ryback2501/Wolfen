@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <fstream>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -32,22 +33,23 @@ const std::filesystem::path& SettingsFile::path() const {
     return path_;
 }
 
-std::string SettingsFile::screenName() const {
+engine::platform::Screen SettingsFile::screen() const {
     // A file that is missing or cannot be read gives no lines.
     std::ifstream file{path_};
     std::string line;
     while (std::getline(file, line)) {
         if (line.starts_with(screenKey)) {
-            return std::string{
-                withoutSpacesAtTheEnds(std::string_view{line}.substr(screenKey.size()))};
+            return {.name = std::string{withoutSpacesAtTheEnds(
+                        std::string_view{line}.substr(screenKey.size()))},
+                    .position = std::nullopt};
         }
     }
     return {};
 }
 
-bool SettingsFile::save(std::string_view screenName) const {
+bool SettingsFile::save(const engine::platform::Screen& screen) const {
     std::ofstream file{path_}; // replaces what was there
-    file << screenKey << screenName << '\n';
+    file << screenKey << screen.name << '\n';
     file.close();
     return !file.fail();
 }

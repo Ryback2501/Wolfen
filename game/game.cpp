@@ -30,12 +30,13 @@ Game::Outcome Game::run() {
     return run(std::nullopt, engine::platform::WindowMode::Windowed, {});
 }
 
-const std::string& Game::screenAtQuit() const {
+const engine::platform::Screen& Game::screenAtQuit() const {
     return screenAtQuit_;
 }
 
 Game::Outcome Game::run(std::optional<engine::render::Backend> backend,
-                        engine::platform::WindowMode windowMode, std::string_view screenName) {
+                        engine::platform::WindowMode windowMode,
+                        const engine::platform::Screen& screen) {
     const std::string title = name();
     *out_ << title << '\n' << std::flush; // flushed, so it shows before the window opens
     try {
@@ -44,7 +45,7 @@ Game::Outcome Game::run(std::optional<engine::render::Backend> backend,
                                                    .size = windowSize,
                                                    .resizable = true,
                                                    .mode = windowMode,
-                                                   .screenName = std::string{screenName}});
+                                                   .screen = screen});
         std::unique_ptr<engine::render::Renderer> renderer;
         try {
             renderer = graphics_->startRenderer(*window, backend);
@@ -56,7 +57,7 @@ Game::Outcome Game::run(std::optional<engine::render::Backend> backend,
         }
         window->setTitle(title + " (" + std::string{renderer->name()} + ")");
         play(*window, *renderer);
-        screenAtQuit_ = window->screenName(); // while the window is still open
+        screenAtQuit_ = window->screen(); // while the window is still open
     } catch (const engine::StartupError& error) {
         *err_ << "Wolfen could not start: " << error.what() << '\n';
         return Outcome::CouldNotStart;

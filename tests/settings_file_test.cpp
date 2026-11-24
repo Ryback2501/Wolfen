@@ -20,14 +20,14 @@ SettingsFile settingsIn(const TempFolder& folder) {
 
 TEST_CASE("No settings file: no saved screen", "[settings]") {
     const TempFolder folder;
-    REQUIRE(settingsIn(folder).screenName().empty());
+    REQUIRE(settingsIn(folder).screen().name.empty());
 }
 
 TEST_CASE("An empty or broken file, or a screen line with no name: no saved screen", "[settings]") {
     for (const std::string text : {"", "garbage", "screen=", "screen=  \r\n", "foo=bar\n"}) {
         const TempFolder folder;
         folder.write("settings.ini", text);
-        REQUIRE(settingsIn(folder).screenName().empty());
+        REQUIRE(settingsIn(folder).screen().name.empty());
     }
 }
 
@@ -35,11 +35,11 @@ TEST_CASE("The saved screen is read without spaces or a CR at the ends, among ot
           "[settings]") {
     const TempFolder folder;
     folder.write("settings.ini", "screen=  DP 2  \r\nfoo=bar\r\n");
-    REQUIRE(settingsIn(folder).screenName() == "DP 2");
+    REQUIRE(settingsIn(folder).screen().name == "DP 2");
 
     const TempFolder otherLineFirst;
     otherLineFirst.write("settings.ini", "foo=bar\r\nscreen= HDMI-1 \r\n");
-    REQUIRE(settingsIn(otherLineFirst).screenName() == "HDMI-1");
+    REQUIRE(settingsIn(otherLineFirst).screen().name == "HDMI-1");
 }
 
 TEST_CASE("Only the first line that starts with screen= counts, and the name is everything after "
@@ -47,28 +47,28 @@ TEST_CASE("Only the first line that starts with screen= counts, and the name is 
           "[settings]") {
     const TempFolder folder;
     folder.write("settings.ini", "myscreen=A\n screen=B\nscreen=C=D\nscreen=E\n");
-    REQUIRE(settingsIn(folder).screenName() == "C=D");
+    REQUIRE(settingsIn(folder).screen().name == "C=D");
 }
 
 TEST_CASE("Saving writes one line, screen=<name>, in place of what was there", "[settings]") {
     const TempFolder folder;
     folder.write("settings.ini", "foo=bar\nscreen=a much longer old name\n");
-    REQUIRE(settingsIn(folder).save("HDMI-2"));
+    REQUIRE(settingsIn(folder).save({.name = "HDMI-2", .position = std::nullopt}));
     REQUIRE(folder.text("settings.ini") == "screen=HDMI-2\n");
-    REQUIRE(settingsIn(folder).screenName() == "HDMI-2");
+    REQUIRE(settingsIn(folder).screen().name == "HDMI-2");
 }
 
 TEST_CASE("A screen with no name is saved as screen= and read back as no saved screen",
           "[settings]") {
     const TempFolder folder;
-    REQUIRE(settingsIn(folder).save(""));
+    REQUIRE(settingsIn(folder).save({.name = "", .position = std::nullopt}));
     REQUIRE(folder.text("settings.ini") == "screen=\n");
-    REQUIRE(settingsIn(folder).screenName().empty());
+    REQUIRE(settingsIn(folder).screen().name.empty());
 }
 
 TEST_CASE("A settings.ini that is a folder: no saved screen, and saving fails", "[settings]") {
     const TempFolder folder;
     std::filesystem::create_directory(folder.path() / "settings.ini");
-    REQUIRE(settingsIn(folder).screenName().empty());
-    REQUIRE_FALSE(settingsIn(folder).save("HDMI-2"));
+    REQUIRE(settingsIn(folder).screen().name.empty());
+    REQUIRE_FALSE(settingsIn(folder).save({.name = "HDMI-2", .position = std::nullopt}));
 }

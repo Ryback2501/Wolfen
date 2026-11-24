@@ -1,9 +1,11 @@
 #ifndef WOLFEN_ENGINE_PLATFORM_WINDOW_HPP
 #define WOLFEN_ENGINE_PLATFORM_WINDOW_HPP
 
+#include "core/point.hpp"
 #include "core/size.hpp"
 
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -16,16 +18,27 @@ enum class WindowMode : std::uint8_t {
     Fullscreen, // borderless, at the screen's own resolution; the screen's mode never changes
 };
 
+// A screen as the system knows it: the name it gives the screen, and where the screen's top-left
+// corner sits on the desktop (unknown when the system cannot say). Two screens of the same model
+// share a name; their positions tell them apart.
+struct Screen {
+    std::string name;
+    std::optional<Point> position;
+
+    friend bool operator==(const Screen&, const Screen&) = default;
+};
+
 // How a window is opened.
 struct WindowSettings {
     std::string title;
     Size size; // in a window; for Fullscreen, the size it gets when it first leaves fullscreen
     bool resizable{true};
     WindowMode mode{WindowMode::Windowed};
-    // The name of the screen to open on, centred there or covering it; empty, or a name no
-    // connected screen has, means the primary one. Where the system places windows itself (Linux
-    // under Wayland), a window may open elsewhere, and nothing is reported.
-    std::string screenName;
+    // The screen to open on, centred there or covering it: the first connected screen with this
+    // name; an empty name, or one no connected screen has, means the primary screen. Where the
+    // system places windows itself (Linux under Wayland), a window may open elsewhere, and nothing
+    // is reported.
+    Screen screen;
 };
 
 // Something that happened to the window since the last poll.
@@ -68,9 +81,9 @@ class Window {
     // fullscreen back to a window with the size, position and maximized state it had before. A
     // window that opened in fullscreen goes back to its settings' size, centred on its screen.
     virtual void switchFullscreen() = 0;
-    // The name of the screen that holds the window's centre (in fullscreen, the screen it covers);
-    // empty when the system gives that screen no name.
-    [[nodiscard]] virtual std::string screenName() const = 0;
+    // The screen that holds the window's centre (in fullscreen, the screen it covers). Its name is
+    // empty when the system gives that screen none.
+    [[nodiscard]] virtual Screen screen() const = 0;
     [[nodiscard]] virtual NativeWindow nativeWindow() const = 0;
 };
 

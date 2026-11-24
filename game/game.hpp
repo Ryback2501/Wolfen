@@ -30,16 +30,16 @@ class Game {
     [[nodiscard]] static std::string name();
 
     // Runs the game with the given renderer, or the best one for this computer when none is given,
-    // in a window or in fullscreen, on the screen with the given name (empty: the primary one),
-    // until it ends; returns how it ended. The window is closed by then.
+    // in a window or in fullscreen, on the given screen (with no name: the primary one), until it
+    // ends; returns how it ended. The window is closed by then.
     Outcome run(std::optional<engine::render::Backend> backend,
-                engine::platform::WindowMode windowMode, std::string_view screenName);
+                engine::platform::WindowMode windowMode, const engine::platform::Screen& screen);
     // Runs the game in a window on the primary screen, with the best renderer for this computer.
     Outcome run();
 
-    // The name of the screen the window was on when the player quit (empty when the system gives
-    // it no name). Only meaningful after a run that ended with Outcome::Ended.
-    [[nodiscard]] const std::string& screenAtQuit() const;
+    // The screen the window was on when the player quit (its name is empty when the system gives
+    // it none). Only meaningful after a run that ended with Outcome::Ended.
+    [[nodiscard]] const engine::platform::Screen& screenAtQuit() const;
 
   private:
     // The main loop: handles the window's events and draws a frame, until the game should end.
@@ -48,7 +48,7 @@ class Game {
     std::ostream* out_;
     std::ostream* err_;
     engine::app::GraphicsSystem* graphics_;
-    std::string screenAtQuit_;
+    engine::platform::Screen screenAtQuit_;
 };
 
 } // namespace wolfen::game

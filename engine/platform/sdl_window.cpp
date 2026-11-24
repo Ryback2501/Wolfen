@@ -93,8 +93,8 @@ SdlWindow::SdlWindow(const WindowSettings& settings) {
     }
 
     const SDL_PropertiesID properties = SDL_CreateProperties();
-    const auto centred =
-        static_cast<std::int64_t>(SDL_WINDOWPOS_CENTERED_DISPLAY(screenNamed(settings.screenName)));
+    const auto centred = static_cast<std::int64_t>(
+        SDL_WINDOWPOS_CENTERED_DISPLAY(screenNamed(settings.screen.name)));
     SDL_SetStringProperty(properties, SDL_PROP_WINDOW_CREATE_TITLE_STRING, settings.title.c_str());
     SDL_SetNumberProperty(properties, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, settings.size.width);
     SDL_SetNumberProperty(properties, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, settings.size.height);
@@ -198,10 +198,10 @@ void SdlWindow::leaveFullscreen() {
     SDL_SyncWindow(window_);
 }
 
-std::string SdlWindow::screenName() const {
+Screen SdlWindow::screen() const {
     const SDL_DisplayID screen = SDL_GetDisplayForWindow(window_);
     const char* name = screen == 0 ? nullptr : SDL_GetDisplayName(screen);
-    return name == nullptr ? std::string{} : std::string{name};
+    return {.name = name == nullptr ? std::string{} : std::string{name}, .position = std::nullopt};
 }
 
 NativeWindow SdlWindow::nativeWindow() const {

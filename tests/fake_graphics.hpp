@@ -35,9 +35,10 @@ class FakeWindow final : public engine::platform::Window {
   public:
     FakeWindow(GraphicsRecord& record,
                std::deque<std::vector<engine::platform::WindowEvent>> events,
-               engine::Size pixelSize, engine::Size sizeAfterResize, std::string screenName = {})
+               engine::Size pixelSize, engine::Size sizeAfterResize,
+               engine::platform::Screen screen = {})
         : record_{&record}, events_{std::move(events)}, pixelSize_{pixelSize},
-          sizeAfterResize_{sizeAfterResize}, screenName_{std::move(screenName)} {}
+          sizeAfterResize_{sizeAfterResize}, screen_{std::move(screen)} {}
     FakeWindow(const FakeWindow&) = delete;
     FakeWindow& operator=(const FakeWindow&) = delete;
     FakeWindow(FakeWindow&&) = delete;
@@ -72,8 +73,8 @@ class FakeWindow final : public engine::platform::Window {
     void switchFullscreen() override {
         ++record_->fullscreenSwitches;
     }
-    [[nodiscard]] std::string screenName() const override {
-        return screenName_;
+    [[nodiscard]] engine::platform::Screen screen() const override {
+        return screen_;
     }
     [[nodiscard]] engine::platform::NativeWindow nativeWindow() const override {
         return {};
@@ -84,7 +85,7 @@ class FakeWindow final : public engine::platform::Window {
     std::deque<std::vector<engine::platform::WindowEvent>> events_;
     engine::Size pixelSize_;
     engine::Size sizeAfterResize_;
-    std::string screenName_;
+    engine::platform::Screen screen_;
 };
 
 // A renderer that draws nothing and records every frame.
@@ -123,8 +124,9 @@ class FakeGraphicsSystem final : public engine::app::GraphicsSystem {
     engine::Size pixelSize{.width = 1280, .height = 720};          // when the window opens
     engine::Size sizeAfterResize{.width = 1280, .height = 720}; // from the first Resized event on
     std::string rendererName{"Fake"};
-    std::string screenName{"Fake screen"};    // the screen the window is on, as the system names it
-    std::optional<std::string> windowFailure; // when set, openWindow() fails with it
+    // The screen the window is on, as the system knows it.
+    engine::platform::Screen screen{.name = "Fake screen", .position = std::nullopt};
+    std::optional<std::string> windowFailure;   // when set, openWindow() fails with it
     std::optional<std::string> rendererFailure; // when set, startRenderer() fails with it
     std::vector<engine::render::Backend> available{engine::render::Backend::Vulkan,
                                                    engine::render::Backend::OpenGL};
@@ -145,7 +147,7 @@ class FakeGraphicsSystem final : public engine::app::GraphicsSystem {
             throw engine::StartupError{*windowFailure};
         }
         return std::make_unique<FakeWindow>(record, std::move(events), pixelSize, sizeAfterResize,
-                                            screenName);
+                                            screen);
     }
 
     std::unique_ptr<engine::render::Renderer>

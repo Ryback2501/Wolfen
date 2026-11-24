@@ -32,7 +32,7 @@ class Launcher {
   private:
     // Saves the screen the game was on after a normal quit, or prints why it could not.
     void saveScreen(const std::optional<SettingsFile>& settingsFile,
-                    std::string_view screenName) const;
+                    const engine::platform::Screen& screen) const;
 
     std::ostream* out_;
     std::ostream* err_;
