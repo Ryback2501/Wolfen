@@ -1,6 +1,7 @@
 #include "platform/sdl_window.hpp"
 
 #include "core/startup_error.hpp"
+#include "platform/screen_list.hpp"
 
 #include <SDL3/SDL.h>
 
@@ -11,6 +12,8 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <utility>
+#include <vector>
 
 namespace wolfen::engine::platform {
 
@@ -57,24 +60,33 @@ void addWindowEvent(const SDL_Event& event, std::vector<WindowEvent>& events) {
     }
 }
 
-// The first connected screen with the given name, or the primary screen when the name is empty or
-// no connected screen has it.
-SDL_DisplayID screenNamed(std::string_view name) {
-    if (!name.empty()) {
-        int count = 0;
-        const std::unique_ptr<SDL_DisplayID, decltype(&SDL_free)> displays{SDL_GetDisplays(&count),
-                                                                           &SDL_free};
-        if (displays != nullptr) {
-            for (const SDL_DisplayID screen :
-                 std::span{displays.get(), static_cast<std::size_t>(count)}) {
-                const char* screenName = SDL_GetDisplayName(screen);
-                if (screenName != nullptr && name == screenName) {
-                    return screen;
-                }
-            }
-        }
+// The screen as the system knows it: its name (empty when it has none) and its top-left corner on
+// the desktop (unknown when the system cannot say).
+Screen screenOf(SDL_DisplayID display) {
+    const char* name = SDL_GetDisplayName(display);
+    SDL_Rect bounds;
+    return {.name = name == nullptr ? std::string{} : std::string{name},
+            .position = SDL_GetDisplayBounds(display, &bounds)
+                            ? std::optional<Point>{Point{.x = bounds.x, .y = bounds.y}}
+                            : std::nullopt};
+}
+
+// The connected screen that matches the saved one (see ScreenList), or the primary screen.
+SDL_DisplayID displayFor(const Screen& saved) {
+    int count = 0;
+    const std::unique_ptr<SDL_DisplayID, decltype(&SDL_free)> displays{SDL_GetDisplays(&count),
+                                                                       &SDL_free};
+    if (displays == nullptr) {
+        return SDL_GetPrimaryDisplay();
     }
-    return SDL_GetPrimaryDisplay();
+    const std::span<const SDL_DisplayID> connected{displays.get(), static_cast<std::size_t>(count)};
+    std::vector<Screen> screens;
+    screens.reserve(connected.size());
+    for (const SDL_DisplayID display : connected) {
+        screens.push_back(screenOf(display));
+    }
+    const std::optional<std::size_t> index = ScreenList{std::move(screens)}.indexOf(saved);
+    return index ? connected[*index] : SDL_GetPrimaryDisplay();
 }
 
 } // namespace
@@ -93,8 +105,8 @@ SdlWindow::SdlWindow(const WindowSettings& settings) {
     }
 
     const SDL_PropertiesID properties = SDL_CreateProperties();
-    const auto centred = static_cast<std::int64_t>(
-        SDL_WINDOWPOS_CENTERED_DISPLAY(screenNamed(settings.screen.name)));
+    const auto centred =
+        static_cast<std::int64_t>(SDL_WINDOWPOS_CENTERED_DISPLAY(displayFor(settings.screen)));
     SDL_SetStringProperty(properties, SDL_PROP_WINDOW_CREATE_TITLE_STRING, settings.title.c_str());
     SDL_SetNumberProperty(properties, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, settings.size.width);
     SDL_SetNumberProperty(properties, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, settings.size.height);
