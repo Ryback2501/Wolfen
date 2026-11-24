@@ -5,7 +5,9 @@
 #include "platform/window.hpp"
 
 #include <cstdint>
+#include <functional>
 #include <iosfwd>
+#include <memory>
 #include <optional>
 #include <string>
 
@@ -21,6 +23,7 @@ class Game {
         Ended,                // played until the player closed it
         ChosenRendererFailed, // the renderer it was given could not start; nothing on stderr
         CouldNotStart,        // it could not start; "Wolfen could not start: ..." was printed
+        NoCpuRenderer,        // no renderer could start on a CPU device; nothing on stderr
     };
 
     Game(std::ostream& out, std::ostream& err, engine::app::GraphicsSystem& graphics);
@@ -35,12 +38,25 @@ class Game {
                 engine::platform::WindowMode windowMode, const engine::platform::Screen& screen);
     // Runs the game in a window on the primary screen, with the best renderer for this computer.
     Outcome run();
+    // Runs the game like run(), but drawing with the CPU: on the first renderer, in the order
+    // Vulkan, Direct3D 11, Direct3D 12 and among those this computer supports, that starts on a
+    // CPU device. Ends with NoCpuRenderer, the window closed, when none does.
+    Outcome runOnCpu(engine::platform::WindowMode windowMode,
+                     const engine::platform::Screen& screen);
 
     // The screen the window was on when the player quit (its name is empty when the system gives
     // it none). Only meaningful after a run that ended with Outcome::Ended.
     [[nodiscard]] const engine::platform::Screen& screenAtQuit() const;
 
   private:
+    // Starts a renderer for the window; null when the renderer asked for cannot start.
+    using RendererStart =
+        std::function<std::unique_ptr<engine::render::Renderer>(engine::platform::Window&)>;
+
+    // Prints the start line, opens the window, starts its renderer with `startRenderer` and plays
+    // until the game ends. Ends with `whenNoRenderer` when no renderer starts.
+    Outcome runWith(engine::platform::WindowMode windowMode, const engine::platform::Screen& screen,
+                    const RendererStart& startRenderer, Outcome whenNoRenderer);
     // The main loop: handles the window's events and draws a frame, until the game should end.
     static void play(engine::platform::Window& window, engine::render::Renderer& renderer);
 
