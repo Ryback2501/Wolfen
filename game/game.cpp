@@ -12,31 +12,42 @@
 
 namespace wolfen::game {
 
+using engine::Colour;
+using engine::Size;
+using engine::StartupError;
+using engine::Version;
+using engine::app::GraphicsSystem;
+using engine::platform::Screen;
+using engine::platform::Window;
+using engine::platform::WindowEvent;
+using engine::platform::WindowMode;
+using engine::render::Backend;
+using engine::render::Renderer;
+
 namespace {
 
-constexpr engine::Size windowSize{.width = 1280, .height = 720};
-constexpr engine::Colour background{.red = 0x64, .green = 0x95, .blue = 0xED, .alpha = 0xFF};
+constexpr Size windowSize{.width = 1280, .height = 720};
+constexpr Colour background{.red = 0x64, .green = 0x95, .blue = 0xED, .alpha = 0xFF};
 
 } // namespace
 
-Game::Game(std::ostream& out, std::ostream& err, engine::app::GraphicsSystem& graphics)
+Game::Game(std::ostream& out, std::ostream& err, GraphicsSystem& graphics)
     : out_{&out}, err_{&err}, graphics_{&graphics} {}
 
 std::string Game::name() {
-    return "Wolfen " + std::string{engine::Version::current().text()};
+    return "Wolfen " + std::string{Version::current().text()};
 }
 
 Game::Outcome Game::run() {
-    return run(std::nullopt, engine::platform::WindowMode::Windowed, {});
+    return run(std::nullopt, WindowMode::Windowed, {});
 }
 
-const engine::platform::Screen& Game::screenAtQuit() const {
+const Screen& Game::screenAtQuit() const {
     return screenAtQuit_;
 }
 
-Game::Outcome Game::run(std::optional<engine::render::Backend> backend,
-                        engine::platform::WindowMode windowMode,
-                        const engine::platform::Screen& screen) {
+Game::Outcome Game::run(std::optional<Backend> backend, WindowMode windowMode,
+                        const Screen& screen) {
     const std::string title = name();
     *out_ << title << '\n' << std::flush; // flushed, so it shows before the window opens
     try {
@@ -46,10 +57,10 @@ Game::Outcome Game::run(std::optional<engine::render::Backend> backend,
                                                    .resizable = true,
                                                    .mode = windowMode,
                                                    .screen = screen});
-        std::unique_ptr<engine::render::Renderer> renderer;
+        std::unique_ptr<Renderer> renderer;
         try {
             renderer = graphics_->startRenderer(*window, backend);
-        } catch (const engine::StartupError&) {
+        } catch (const StartupError&) {
             if (!backend) {
                 throw;
             }
@@ -58,34 +69,34 @@ Game::Outcome Game::run(std::optional<engine::render::Backend> backend,
         window->setTitle(title + " (" + std::string{renderer->name()} + ")");
         play(*window, *renderer);
         screenAtQuit_ = window->screen(); // while the window is still open
-    } catch (const engine::StartupError& error) {
+    } catch (const StartupError& error) {
         *err_ << "Wolfen could not start: " << error.what() << '\n';
         return Outcome::CouldNotStart;
     }
     return Outcome::Ended;
 }
 
-void Game::play(engine::platform::Window& window, engine::render::Renderer& renderer) {
+void Game::play(Window& window, Renderer& renderer) {
     bool running = true;
     bool visible = true;
     while (running) {
         // A hidden window is not drawn, so sleep until something happens instead of spinning.
         for (const auto event : visible ? window.pollEvents() : window.waitEvents()) {
             switch (event) {
-            case engine::platform::WindowEvent::CloseRequested:
-            case engine::platform::WindowEvent::EscapePressed:
+            case WindowEvent::CloseRequested:
+            case WindowEvent::EscapePressed:
                 running = false;
                 break;
-            case engine::platform::WindowEvent::Resized:
+            case WindowEvent::Resized:
                 renderer.resize(window.pixelSize());
                 break;
-            case engine::platform::WindowEvent::Hidden:
+            case WindowEvent::Hidden:
                 visible = false;
                 break;
-            case engine::platform::WindowEvent::Shown:
+            case WindowEvent::Shown:
                 visible = true;
                 break;
-            case engine::platform::WindowEvent::FullscreenKeyPressed:
+            case WindowEvent::FullscreenKeyPressed:
                 window.switchFullscreen();
                 break;
             }
