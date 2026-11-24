@@ -9,6 +9,7 @@
 #include <iosfwd>
 #include <memory>
 #include <optional>
+#include <span>
 #include <string>
 
 namespace wolfen::game {
@@ -40,7 +41,8 @@ class Game {
     Outcome run();
     // Runs the game like run(), but drawing with the CPU: on the first renderer, in the order
     // Vulkan, Direct3D 11, Direct3D 12 and among those this computer supports, that starts on a
-    // CPU device. Ends with NoCpuRenderer, the window closed, when none does.
+    // CPU device. Each try has a window of its own. Ends with NoCpuRenderer, no window left open,
+    // when none does.
     Outcome runOnCpu(engine::platform::WindowMode windowMode,
                      const engine::platform::Screen& screen);
 
@@ -53,10 +55,12 @@ class Game {
     using RendererStart =
         std::function<std::unique_ptr<engine::render::Renderer>(engine::platform::Window&)>;
 
-    // Prints the start line, opens the window, starts its renderer with `startRenderer` and plays
-    // until the game ends. Ends with `whenNoRenderer` when no renderer starts.
+    // Prints the start line, then tries each way to start a renderer in turn, each in a window of
+    // its own: a window whose renderer does not start closes before the next try, so no graphics
+    // API ever reuses another's window. Plays with the first renderer that starts, until the game
+    // ends. Ends with `whenNoRenderer` when none starts.
     Outcome runWith(engine::platform::WindowMode windowMode, const engine::platform::Screen& screen,
-                    const RendererStart& startRenderer, Outcome whenNoRenderer);
+                    std::span<const RendererStart> starts, Outcome whenNoRenderer);
     // The main loop: handles the window's events and draws a frame, until the game should end.
     static void play(engine::platform::Window& window, engine::render::Renderer& renderer);
 
