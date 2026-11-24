@@ -5,8 +5,12 @@
 #include <SDL3/SDL.h>
 
 #include <bit>
+#include <cstddef>
 #include <cstdint>
+#include <memory>
+#include <span>
 #include <string>
+#include <string_view>
 
 namespace wolfen::engine::platform {
 
@@ -53,6 +57,26 @@ void addWindowEvent(const SDL_Event& event, std::vector<WindowEvent>& events) {
     }
 }
 
+// The first connected screen with the given name, or the primary screen when the name is empty or
+// no connected screen has it.
+SDL_DisplayID screenNamed(std::string_view name) {
+    if (!name.empty()) {
+        int count = 0;
+        const std::unique_ptr<SDL_DisplayID, decltype(&SDL_free)> displays{SDL_GetDisplays(&count),
+                                                                           &SDL_free};
+        if (displays != nullptr) {
+            for (const SDL_DisplayID screen :
+                 std::span{displays.get(), static_cast<std::size_t>(count)}) {
+                const char* screenName = SDL_GetDisplayName(screen);
+                if (screenName != nullptr && name == screenName) {
+                    return screen;
+                }
+            }
+        }
+    }
+    return SDL_GetPrimaryDisplay();
+}
+
 } // namespace
 
 SdlWindow::SdlWindow(const WindowSettings& settings) {
@@ -70,7 +94,7 @@ SdlWindow::SdlWindow(const WindowSettings& settings) {
 
     const SDL_PropertiesID properties = SDL_CreateProperties();
     const auto centred =
-        static_cast<std::int64_t>(SDL_WINDOWPOS_CENTERED_DISPLAY(SDL_GetPrimaryDisplay()));
+        static_cast<std::int64_t>(SDL_WINDOWPOS_CENTERED_DISPLAY(screenNamed(settings.screen)));
     SDL_SetStringProperty(properties, SDL_PROP_WINDOW_CREATE_TITLE_STRING, settings.title.c_str());
     SDL_SetNumberProperty(properties, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, settings.size.width);
     SDL_SetNumberProperty(properties, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, settings.size.height);
@@ -79,7 +103,7 @@ SdlWindow::SdlWindow(const WindowSettings& settings) {
     SDL_SetBooleanProperty(properties, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN,
                            settings.resizable);
     SDL_SetBooleanProperty(properties, SDL_PROP_WINDOW_CREATE_HIGH_PIXEL_DENSITY_BOOLEAN, true);
-    // Fullscreen covers the screen that holds the window's centre: the primary one, as the window
+    // Fullscreen covers the screen that holds the window's centre: the chosen one, as the window
     // is centred there. No fullscreen mode is ever set, so it is borderless at the screen's own
     // resolution and the screen's mode never changes.
     SDL_SetBooleanProperty(properties, SDL_PROP_WINDOW_CREATE_FULLSCREEN_BOOLEAN,
@@ -175,7 +199,9 @@ void SdlWindow::leaveFullscreen() {
 }
 
 std::string SdlWindow::screenName() const {
-    return {};
+    const SDL_DisplayID screen = SDL_GetDisplayForWindow(window_);
+    const char* name = screen == 0 ? nullptr : SDL_GetDisplayName(screen);
+    return name == nullptr ? std::string{} : std::string{name};
 }
 
 NativeWindow SdlWindow::nativeWindow() const {

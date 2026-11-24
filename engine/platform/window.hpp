@@ -21,9 +21,10 @@ struct WindowSettings {
     std::string title;
     Size size; // in a window; for Fullscreen, the size it gets when it first leaves fullscreen
     bool resizable{true};
-    WindowMode mode{WindowMode::Windowed}; // Fullscreen opens on the primary screen
-    // The name of the screen to open on; empty, or a name no connected screen has, means the
-    // primary one.
+    WindowMode mode{WindowMode::Windowed};
+    // The name of the screen to open on, centred there or covering it; empty, or a name no
+    // connected screen has, means the primary one. Where the system places windows itself (Linux
+    // under Wayland), a window may open elsewhere, and nothing is reported.
     std::string screen;
 };
 
