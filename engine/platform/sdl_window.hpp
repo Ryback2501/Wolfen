@@ -1,6 +1,7 @@
 #ifndef WOLFEN_ENGINE_PLATFORM_SDL_WINDOW_HPP
 #define WOLFEN_ENGINE_PLATFORM_SDL_WINDOW_HPP
 
+#include "platform/screen.hpp"
 #include "platform/window.hpp"
 
 #include <optional>

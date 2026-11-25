@@ -1,7 +1,10 @@
 #include "platform/sdl_window.hpp"
 
+#include "core/point.hpp"
 #include "core/startup_error.hpp"
+#include "platform/screen.hpp"
 #include "platform/screen_list.hpp"
+#include "platform/window_mode.hpp"
 
 #include <SDL3/SDL.h>
 

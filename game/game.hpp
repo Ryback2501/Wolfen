@@ -2,7 +2,9 @@
 #define WOLFEN_GAME_GAME_HPP
 
 #include "app/graphics_system.hpp"
+#include "platform/screen.hpp"
 #include "platform/window.hpp"
+#include "platform/window_mode.hpp"
 
 #include <cstdint>
 #include <functional>

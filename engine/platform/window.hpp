@@ -1,32 +1,16 @@
 #ifndef WOLFEN_ENGINE_PLATFORM_WINDOW_HPP
 #define WOLFEN_ENGINE_PLATFORM_WINDOW_HPP
 
-#include "core/point.hpp"
 #include "core/size.hpp"
+#include "platform/screen.hpp"
+#include "platform/window_mode.hpp"
 
 #include <cstdint>
-#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
 
 namespace wolfen::engine::platform {
-
-// Whether a window is a normal window or covers its whole screen.
-enum class WindowMode : std::uint8_t {
-    Windowed,
-    Fullscreen, // borderless, at the screen's own resolution; the screen's mode never changes
-};
-
-// A screen as the system knows it: the name it gives the screen, and where the screen's top-left
-// corner sits on the desktop (unknown when the system cannot say). Two screens of the same model
-// share a name; their positions tell them apart.
-struct Screen {
-    std::string name;
-    std::optional<Point> position;
-
-    friend bool operator==(const Screen&, const Screen&) = default;
-};
 
 // How a window is opened.
 struct WindowSettings {

@@ -1,6 +1,6 @@
 #include "core/point.hpp"
+#include "platform/screen.hpp"
 #include "platform/screen_list.hpp"
-#include "platform/window.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 

@@ -2,6 +2,8 @@
 #include "core/version.hpp"
 #include "fake_graphics.hpp"
 #include "game.hpp"
+#include "platform/window.hpp"
+#include "platform/window_mode.hpp"
 #include "render/renderer_name.hpp"
 #include "runs.hpp"
 

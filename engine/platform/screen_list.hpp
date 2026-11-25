@@ -1,7 +1,7 @@
 #ifndef WOLFEN_ENGINE_PLATFORM_SCREEN_LIST_HPP
 #define WOLFEN_ENGINE_PLATFORM_SCREEN_LIST_HPP
 
-#include "platform/window.hpp"
+#include "platform/screen.hpp"
 
 #include <cstddef>
 #include <optional>

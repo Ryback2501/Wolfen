@@ -1,7 +1,7 @@
 #ifndef WOLFEN_GAME_COMMAND_LINE_HPP
 #define WOLFEN_GAME_COMMAND_LINE_HPP
 
-#include "platform/window.hpp"
+#include "platform/window_mode.hpp"
 #include "render/backend.hpp"
 
 #include <cstdint>

@@ -5,6 +5,8 @@
 #include "core/colour.hpp"
 #include "core/size.hpp"
 #include "core/startup_error.hpp"
+#include "platform/screen.hpp"
+#include "platform/window.hpp"
 #include "render/renderer_name.hpp"
 
 #include <algorithm>

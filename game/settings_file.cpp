@@ -1,5 +1,7 @@
 #include "settings_file.hpp"
 
+#include "core/point.hpp"
+
 #include <charconv>
 #include <cstddef>
 #include <fstream>

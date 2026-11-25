@@ -5,7 +5,7 @@
 #include "fake_graphics.hpp"
 #include "game.hpp"
 #include "launcher.hpp"
-#include "platform/window.hpp"
+#include "platform/window_mode.hpp"
 #include "render/backend.hpp"
 #include "temp_folder.hpp"
 
