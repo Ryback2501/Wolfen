@@ -1,7 +1,7 @@
 #ifndef WOLFEN_GAME_SETTINGS_FILE_HPP
 #define WOLFEN_GAME_SETTINGS_FILE_HPP
 
-#include "platform/window.hpp"
+#include "platform/screen.hpp"
 
 #include <filesystem>
 

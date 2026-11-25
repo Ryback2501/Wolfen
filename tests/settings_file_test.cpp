@@ -1,3 +1,5 @@
+#include "core/point.hpp"
+#include "platform/screen.hpp"
 #include "settings_file.hpp"
 #include "temp_folder.hpp"
 

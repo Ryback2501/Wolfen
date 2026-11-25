@@ -22,7 +22,6 @@ using engine::Version;
 using engine::app::GraphicsSystem;
 using engine::platform::Screen;
 using engine::platform::Window;
-using engine::platform::WindowEvent;
 using engine::platform::WindowMode;
 using engine::render::Backend;
 using engine::render::Renderer;
@@ -122,20 +121,20 @@ void Game::play(Window& window, Renderer& renderer) {
         // A hidden window is not drawn, so sleep until something happens instead of spinning.
         for (const auto event : visible ? window.pollEvents() : window.waitEvents()) {
             switch (event) {
-            case WindowEvent::CloseRequested:
-            case WindowEvent::EscapePressed:
+            case Window::Event::CloseRequested:
+            case Window::Event::EscapePressed:
                 running = false;
                 break;
-            case WindowEvent::Resized:
+            case Window::Event::Resized:
                 renderer.resize(window.pixelSize());
                 break;
-            case WindowEvent::Hidden:
+            case Window::Event::Hidden:
                 visible = false;
                 break;
-            case WindowEvent::Shown:
+            case Window::Event::Shown:
                 visible = true;
                 break;
-            case WindowEvent::FullscreenKeyPressed:
+            case Window::Event::FullscreenKeyPressed:
                 window.switchFullscreen();
                 break;
             }

@@ -1,6 +1,7 @@
 #ifndef WOLFEN_ENGINE_PLATFORM_SDL_WINDOW_HPP
 #define WOLFEN_ENGINE_PLATFORM_SDL_WINDOW_HPP
 
+#include "platform/screen.hpp"
 #include "platform/window.hpp"
 
 #include <optional>
@@ -14,20 +15,20 @@ namespace wolfen::engine::platform {
 class SdlWindow final : public Window {
   public:
     // Throws StartupError when SDL cannot start or the window cannot be opened.
-    explicit SdlWindow(const WindowSettings& settings);
+    explicit SdlWindow(const Window::Settings& settings);
     SdlWindow(const SdlWindow&) = delete;
     SdlWindow& operator=(const SdlWindow&) = delete;
     SdlWindow(SdlWindow&&) = delete;
     SdlWindow& operator=(SdlWindow&&) = delete;
     ~SdlWindow() override;
 
-    std::vector<WindowEvent> pollEvents() override;
-    std::vector<WindowEvent> waitEvents() override;
+    std::vector<Window::Event> pollEvents() override;
+    std::vector<Window::Event> waitEvents() override;
     [[nodiscard]] Size pixelSize() const override;
     void setTitle(std::string_view title) override;
     void switchFullscreen() override;
     [[nodiscard]] Screen screen() const override;
-    [[nodiscard]] NativeWindow nativeWindow() const override;
+    [[nodiscard]] Window::NativeHandles nativeHandles() const override;
 
   private:
     // Where a window was, and how big, before it went fullscreen.

@@ -24,7 +24,7 @@ class GraphicsSystem {
 
     // Throws StartupError when the window cannot be opened.
     virtual std::unique_ptr<platform::Window>
-    openWindow(const platform::WindowSettings& settings) = 0;
+    openWindow(const platform::Window::Settings& settings) = 0;
     // The renderers this computer supports, among the ones Wolfen names (never Backend::Other).
     // Needs no window.
     [[nodiscard]] virtual std::vector<render::Backend> availableBackends() const = 0;

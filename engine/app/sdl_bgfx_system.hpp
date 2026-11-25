@@ -8,7 +8,8 @@ namespace wolfen::engine::app {
 // The real graphics system: windows from SDL3, renderers from bgfx.
 class SdlBgfxSystem final : public GraphicsSystem {
   public:
-    std::unique_ptr<platform::Window> openWindow(const platform::WindowSettings& settings) override;
+    std::unique_ptr<platform::Window>
+    openWindow(const platform::Window::Settings& settings) override;
     [[nodiscard]] std::vector<render::Backend> availableBackends() const override;
     std::unique_ptr<render::Renderer>
     startRenderer(platform::Window& window, std::optional<render::Backend> backend) override;

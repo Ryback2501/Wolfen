@@ -13,32 +13,32 @@
 
 namespace wolfen::engine::render {
 
-// One renderer Wolfen names: its backend, bgfx's renderer type for it, and its name as shown to
-// people.
-struct RendererRow {
-    Backend backend;
-    bgfx::RendererType::Enum bgfxType;
-    std::string_view displayName;
-};
-
 // Every renderer Wolfen names, one row each, so each renderer's details are written once. It holds
 // bgfx's types, so only engine/render/ may use it; RendererName gives everyone else the display
 // names without bgfx.
 class RendererTable {
   public:
+    // One renderer Wolfen names: its backend, bgfx's renderer type for it, and its name as shown to
+    // people.
+    struct Row {
+        Backend backend;
+        bgfx::RendererType::Enum bgfxType;
+        std::string_view displayName;
+    };
+
     // The row for a backend, or null for Backend::Other.
-    static constexpr const RendererRow* find(Backend backend) {
-        return findRow([backend](const RendererRow& row) { return row.backend == backend; });
+    static constexpr const Row* find(Backend backend) {
+        return findRow([backend](const Row& row) { return row.backend == backend; });
     }
 
     // The row for a bgfx renderer type, or null for a type Wolfen does not name.
-    static constexpr const RendererRow* find(bgfx::RendererType::Enum bgfxType) {
-        return findRow([bgfxType](const RendererRow& row) { return row.bgfxType == bgfxType; });
+    static constexpr const Row* find(bgfx::RendererType::Enum bgfxType) {
+        return findRow([bgfxType](const Row& row) { return row.bgfxType == bgfxType; });
     }
 
   private:
     // In the order of Backend, one row for every value before Other.
-    static constexpr std::array<RendererRow, 5> rows_{
+    static constexpr std::array<Row, 5> rows_{
         {{.backend = Backend::Vulkan,
           .bgfxType = bgfx::RendererType::Vulkan,
           .displayName = "Vulkan"},
@@ -55,9 +55,8 @@ class RendererTable {
 
     // The first row that `matches` accepts, or null. A plain loop returning a pointer, so the code
     // does not depend on whether the library's array iterators are pointers.
-    template <typename Matches>
-    static constexpr const RendererRow* findRow(const Matches& matches) {
-        for (const RendererRow& row : rows_) {
+    template <typename Matches> static constexpr const Row* findRow(const Matches& matches) {
+        for (const Row& row : rows_) {
             if (matches(row)) {
                 return &row;
             }

@@ -2,6 +2,7 @@
 #define WOLFEN_GAME_LAUNCHER_HPP
 
 #include "app/graphics_system.hpp"
+#include "platform/screen.hpp"
 #include "settings_file.hpp"
 
 #include <filesystem>

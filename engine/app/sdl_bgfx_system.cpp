@@ -6,7 +6,7 @@
 namespace wolfen::engine::app {
 
 std::unique_ptr<platform::Window>
-SdlBgfxSystem::openWindow(const platform::WindowSettings& settings) {
+SdlBgfxSystem::openWindow(const platform::Window::Settings& settings) {
     return std::make_unique<platform::SdlWindow>(settings);
 }
 
@@ -21,7 +21,8 @@ SdlBgfxSystem::startRenderer(platform::Window& window, std::optional<render::Bac
 
 std::unique_ptr<render::Renderer> SdlBgfxSystem::startCpuRenderer(platform::Window& window,
                                                                   render::Backend backend) {
-    return std::make_unique<render::BgfxRenderer>(window, backend, render::DeviceChoice::Cpu);
+    return std::make_unique<render::BgfxRenderer>(window, backend,
+                                                  render::BgfxRenderer::Device::Cpu);
 }
 
 } // namespace wolfen::engine::app
