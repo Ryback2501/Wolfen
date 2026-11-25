@@ -21,13 +21,13 @@ constexpr std::uint32_t resetFlags = BGFX_RESET_VSYNC; // one frame per screen r
 
 // The backend for a bgfx renderer type; Backend::Other for a type Wolfen does not name.
 Backend backendOf(bgfx::RendererType::Enum type) {
-    const RendererRow* row = RendererTable::find(type);
+    const RendererTable::Row* row = RendererTable::find(type);
     return row == nullptr ? Backend::Other : row->backend;
 }
 
 // The bgfx renderer type for a backend; for Backend::Other, "let bgfx choose".
 bgfx::RendererType::Enum bgfxTypeOf(Backend backend) {
-    const RendererRow* row = RendererTable::find(backend);
+    const RendererTable::Row* row = RendererTable::find(backend);
     return row == nullptr ? bgfx::RendererType::Count : row->bgfxType;
 }
 
@@ -102,7 +102,7 @@ std::vector<Backend> BgfxRenderer::availableBackends() {
 }
 
 BgfxRenderer::BgfxRenderer(const platform::Window& window, std::optional<Backend> backend,
-                           DeviceChoice device) {
+                           Device device) {
     const platform::Window::NativeHandles nativeHandles = window.nativeHandles();
     if (nativeHandles.window == nullptr) {
         // bgfx would quietly start with no window at all, so stop before touching it.
@@ -118,7 +118,7 @@ BgfxRenderer::BgfxRenderer(const platform::Window& window, std::optional<Backend
     const bool backendChosen = backend.has_value() && *backend != Backend::Other;
     init.type = backendChosen ? bgfxTypeOf(*backend) : bgfx::RendererType::Count;
     init.fallback = !backendChosen;
-    if (device == DeviceChoice::Cpu) {
+    if (device == Device::Cpu) {
         // Direct3D picks the adapter with these ids: WARP's, as other Microsoft adapters (a virtual
         // machine's or a remote session's display) may come first. bgfx looks only at the first
         // four adapters and WARP is listed last, so a computer with more misses it; this is
@@ -147,7 +147,7 @@ BgfxRenderer::BgfxRenderer(const platform::Window& window, std::optional<Backend
         const bgfx::RendererType::Enum type = bgfx::getRendererType();
         name_ = RendererName::display(backendOf(type), bgfx::getRendererName(type));
         drawsWithCpu_ = drawsOnCpu(*bgfx::getCaps());
-        if (device == DeviceChoice::Cpu && !drawsWithCpu_) {
+        if (device == Device::Cpu && !drawsWithCpu_) {
             // bgfx falls back to a graphics card when it finds no CPU device.
             throw StartupError{"there is no CPU device for this renderer"};
         }
