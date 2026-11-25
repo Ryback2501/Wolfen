@@ -22,7 +22,7 @@
 
 using wolfen::engine::Point;
 using wolfen::engine::platform::Screen;
-using wolfen::engine::platform::WindowEvent;
+using wolfen::engine::platform::Window;
 using wolfen::engine::platform::WindowMode;
 using wolfen::engine::render::Backend;
 using wolfen::tests::FakeGraphicsSystem;
@@ -92,7 +92,7 @@ void requirePrimaryScreenThenSaved(const std::optional<std::string>& settingsTex
 
 // A start with the given options in a window that ends with the given quit event: the screen the
 // window was on is saved in the game's folder, with no warning, exit 0.
-void requireScreenSavedOnQuit(WindowEvent quit, std::initializer_list<std::string_view> args) {
+void requireScreenSavedOnQuit(Window::Event quit, std::initializer_list<std::string_view> args) {
     const TempFolder folder;
     FakeGraphicsSystem graphics;
     graphics.screen = {.name = "HDMI-2", .position = Point{.x = 1920, .y = 0}};
@@ -365,7 +365,7 @@ TEST_CASE("Without --fullscreen the game starts in a window", "[options][fullscr
 
 TEST_CASE("In fullscreen, Esc quits with exit code 0", "[options][fullscreen]") {
     FakeGraphicsSystem graphics;
-    graphics.events = {{}, {WindowEvent::EscapePressed}};
+    graphics.events = {{}, {Window::Event::EscapePressed}};
     const LauncherRun run{graphics, {"--fullscreen"}};
     REQUIRE(graphics.record.windowSettings.mode == WindowMode::Fullscreen);
     REQUIRE(graphics.record.frames.size() == 1);
@@ -385,7 +385,7 @@ TEST_CASE("The --fullscreen option given twice", "[options][fullscreen]") {
 TEST_CASE("A normal quit saves the screen the window was on in the game's folder, in a window or "
           "fullscreen",
           "[settings]") {
-    for (const auto quit : {WindowEvent::CloseRequested, WindowEvent::EscapePressed}) {
+    for (const auto quit : {Window::Event::CloseRequested, Window::Event::EscapePressed}) {
         requireScreenSavedOnQuit(quit, {});
         requireScreenSavedOnQuit(quit, {"--fullscreen"});
     }
@@ -420,7 +420,7 @@ TEST_CASE("Fullscreen is not remembered: after quitting fullscreen, the next sta
     const TempFolder folder;
     FakeGraphicsSystem first;
     first.screen = {.name = "HDMI-2", .position = Point{.x = 1920, .y = 0}};
-    first.events = {{WindowEvent::FullscreenKeyPressed}, {WindowEvent::CloseRequested}};
+    first.events = {{Window::Event::FullscreenKeyPressed}, {Window::Event::CloseRequested}};
     const LauncherRun firstRun{first, folder.path(), {}};
     REQUIRE(first.record.fullscreenSwitches == 1);
 
@@ -556,7 +556,7 @@ TEST_CASE("The --software option combines with --fullscreen in any order",
     requireSoftwareStart({"--fullscreen", "--software"});
     FakeGraphicsSystem graphics;
     graphics.cpuBackends = {Backend::Vulkan};
-    graphics.events = {{WindowEvent::FullscreenKeyPressed}, {}};
+    graphics.events = {{Window::Event::FullscreenKeyPressed}, {}};
     const LauncherRun run{graphics, {"--fullscreen", "--software"}};
     REQUIRE(graphics.record.windowSettings.mode == WindowMode::Fullscreen);
     REQUIRE(graphics.record.fullscreenSwitches == 1);

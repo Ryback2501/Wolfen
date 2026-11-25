@@ -23,7 +23,7 @@ namespace wolfen::tests {
 // What happened to the fake window and renderer, for the tests to check. It outlives them.
 struct GraphicsRecord {
     std::vector<std::string> steps; // "open window", "start renderer", "close renderer", ...
-    engine::platform::WindowSettings windowSettings; // as asked for by the last openWindow()
+    engine::platform::Window::Settings windowSettings; // as asked for by the last openWindow()
     std::vector<std::string> titles;
     std::vector<engine::Colour> frames;
     std::vector<engine::Size> resizes;
@@ -39,7 +39,7 @@ struct GraphicsRecord {
 class FakeWindow final : public engine::platform::Window {
   public:
     FakeWindow(GraphicsRecord& record,
-               std::deque<std::vector<engine::platform::WindowEvent>> events,
+               std::deque<std::vector<engine::platform::Window::Event>> events,
                engine::Size pixelSize, engine::Size sizeAfterResize,
                engine::platform::Screen screen = {})
         : record_{&record}, events_{std::move(events)}, pixelSize_{pixelSize},
@@ -52,20 +52,20 @@ class FakeWindow final : public engine::platform::Window {
         record_->steps.emplace_back("close window");
     }
 
-    std::vector<engine::platform::WindowEvent> pollEvents() override {
+    std::vector<engine::platform::Window::Event> pollEvents() override {
         if (events_.empty()) {
-            return {engine::platform::WindowEvent::CloseRequested};
+            return {engine::platform::Window::Event::CloseRequested};
         }
         auto batch = std::move(events_.front());
         events_.pop_front();
         for (const auto event : batch) {
-            if (event == engine::platform::WindowEvent::Resized) {
+            if (event == engine::platform::Window::Event::Resized) {
                 pixelSize_ = sizeAfterResize_;
             }
         }
         return batch;
     }
-    std::vector<engine::platform::WindowEvent> waitEvents() override {
+    std::vector<engine::platform::Window::Event> waitEvents() override {
         ++record_->waits;
         return pollEvents();
     }
@@ -81,13 +81,13 @@ class FakeWindow final : public engine::platform::Window {
     [[nodiscard]] engine::platform::Screen screen() const override {
         return screen_;
     }
-    [[nodiscard]] engine::platform::NativeWindow nativeWindow() const override {
+    [[nodiscard]] engine::platform::Window::NativeHandles nativeHandles() const override {
         return {};
     }
 
   private:
     GraphicsRecord* record_;
-    std::deque<std::vector<engine::platform::WindowEvent>> events_;
+    std::deque<std::vector<engine::platform::Window::Event>> events_;
     engine::Size pixelSize_;
     engine::Size sizeAfterResize_;
     engine::platform::Screen screen_;
@@ -129,8 +129,8 @@ class FakeRenderer final : public engine::render::Renderer {
 class FakeGraphicsSystem final : public engine::app::GraphicsSystem {
   public:
     GraphicsRecord record;
-    std::deque<std::vector<engine::platform::WindowEvent>> events; // one batch per poll
-    engine::Size pixelSize{.width = 1280, .height = 720};          // when the window opens
+    std::deque<std::vector<engine::platform::Window::Event>> events; // one batch per poll
+    engine::Size pixelSize{.width = 1280, .height = 720};            // when the window opens
     engine::Size sizeAfterResize{.width = 1280, .height = 720}; // from the first Resized event on
     std::string rendererName{"Fake"};
     bool rendererDrawsWithCpu{false}; // whether startRenderer() ends up on a CPU device
@@ -149,7 +149,7 @@ class FakeGraphicsSystem final : public engine::app::GraphicsSystem {
     }
 
     std::unique_ptr<engine::platform::Window>
-    openWindow(const engine::platform::WindowSettings& settings) override {
+    openWindow(const engine::platform::Window::Settings& settings) override {
         record.steps.emplace_back("open window");
         record.windowSettings = settings;
         if (watchedOutput != nullptr) {

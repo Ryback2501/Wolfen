@@ -103,8 +103,8 @@ std::vector<Backend> BgfxRenderer::availableBackends() {
 
 BgfxRenderer::BgfxRenderer(const platform::Window& window, std::optional<Backend> backend,
                            DeviceChoice device) {
-    const platform::NativeWindow nativeWindow = window.nativeWindow();
-    if (nativeWindow.window == nullptr) {
+    const platform::Window::NativeHandles nativeHandles = window.nativeHandles();
+    if (nativeHandles.window == nullptr) {
         // bgfx would quietly start with no window at all, so stop before touching it.
         throw StartupError{"the window has no native window handle for the renderer"};
     }
@@ -130,11 +130,11 @@ BgfxRenderer::BgfxRenderer(const platform::Window& window, std::optional<Backend
             init.vendorId = BGFX_PCI_ID_SOFTWARE_RASTERIZER;
         }
     }
-    init.platformData.type = nativeWindow.kind == platform::NativeWindow::Kind::Wayland
+    init.platformData.type = nativeHandles.kind == platform::Window::NativeHandles::Kind::Wayland
                                  ? bgfx::NativeWindowHandleType::Wayland
                                  : bgfx::NativeWindowHandleType::Default;
-    init.swapChain.nwh = nativeWindow.window;
-    init.swapChain.ndt = nativeWindow.display;
+    init.swapChain.nwh = nativeHandles.window;
+    init.swapChain.ndt = nativeHandles.display;
     setSwapChainSize(init.swapChain, window.pixelSize());
     init.reset = resetFlags;
     if (!bgfx::init(init)) {

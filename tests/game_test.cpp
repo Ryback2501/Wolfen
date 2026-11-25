@@ -16,7 +16,7 @@
 using wolfen::engine::Colour;
 using wolfen::engine::Size;
 using wolfen::engine::Version;
-using wolfen::engine::platform::WindowEvent;
+using wolfen::engine::platform::Window;
 using wolfen::engine::platform::WindowMode;
 using wolfen::engine::render::Backend;
 using wolfen::engine::render::RendererName;
@@ -54,7 +54,7 @@ TEST_CASE("The title shows the version and the renderer in use", "[game]") {
 
 TEST_CASE("Every frame fills the window with cornflower blue", "[game]") {
     FakeGraphicsSystem graphics;
-    graphics.events = {{}, {}, {}, {WindowEvent::CloseRequested}};
+    graphics.events = {{}, {}, {}, {Window::Event::CloseRequested}};
     const GameRun run{graphics};
     const Colour cornflowerBlue{.red = 0x64, .green = 0x95, .blue = 0xED, .alpha = 0xFF};
     REQUIRE(graphics.record.frames == std::vector<Colour>(3, cornflowerBlue));
@@ -62,7 +62,7 @@ TEST_CASE("Every frame fills the window with cornflower blue", "[game]") {
 
 TEST_CASE("The close button ends the game", "[game]") {
     FakeGraphicsSystem graphics;
-    graphics.events = {{}, {WindowEvent::CloseRequested}, {}};
+    graphics.events = {{}, {Window::Event::CloseRequested}, {}};
     const GameRun run{graphics};
     REQUIRE(run.outcome() == Game::Outcome::Ended);
     REQUIRE(graphics.record.frames.size() == 1);
@@ -71,7 +71,7 @@ TEST_CASE("The close button ends the game", "[game]") {
 
 TEST_CASE("Esc ends the game", "[game]") {
     FakeGraphicsSystem graphics;
-    graphics.events = {{}, {WindowEvent::EscapePressed}, {}};
+    graphics.events = {{}, {Window::Event::EscapePressed}, {}};
     const GameRun run{graphics};
     REQUIRE(run.outcome() == Game::Outcome::Ended);
     REQUIRE(graphics.record.frames.size() == 1);
@@ -81,7 +81,7 @@ TEST_CASE("Resizing the window gives the renderer the new size in pixels", "[gam
     FakeGraphicsSystem graphics;
     graphics.pixelSize = Size{.width = 1280, .height = 720};
     graphics.sizeAfterResize = Size{.width = 1600, .height = 900};
-    graphics.events = {{}, {WindowEvent::Resized}, {}};
+    graphics.events = {{}, {Window::Event::Resized}, {}};
     const GameRun run{graphics};
     REQUIRE(graphics.record.resizes == std::vector<Size>{Size{.width = 1600, .height = 900}});
 }
@@ -130,7 +130,7 @@ TEST_CASE("Any other renderer shows the rendering library's own name", "[rendere
 
 TEST_CASE("A hidden window is not drawn; the game sleeps until it is shown again", "[game]") {
     FakeGraphicsSystem graphics;
-    graphics.events = {{}, {WindowEvent::Hidden}, {}, {}, {WindowEvent::Shown}, {}, {}};
+    graphics.events = {{}, {Window::Event::Hidden}, {}, {}, {Window::Event::Shown}, {}, {}};
     const GameRun run{graphics};
     // Drawn after the 1st batch; not after Hidden (2nd) nor the batches waited for while hidden
     // (3rd, 4th); again after Shown (5th), the 6th and the 7th. The 8th poll finds none left and
@@ -143,7 +143,7 @@ TEST_CASE("A hidden window is not drawn; the game sleeps until it is shown again
 
 TEST_CASE("A hidden window can still be closed", "[game]") {
     FakeGraphicsSystem graphics;
-    graphics.events = {{WindowEvent::Hidden}, {WindowEvent::CloseRequested}};
+    graphics.events = {{Window::Event::Hidden}, {Window::Event::CloseRequested}};
     const GameRun run{graphics};
     REQUIRE(graphics.record.frames.empty());
     REQUIRE(graphics.record.waits == 1);
@@ -205,7 +205,7 @@ TEST_CASE("Each F11 press switches fullscreen once, and the game keeps drawing",
           "[game][fullscreen]") {
     FakeGraphicsSystem graphics;
     graphics.events = {
-        {WindowEvent::FullscreenKeyPressed}, {}, {WindowEvent::FullscreenKeyPressed}, {}};
+        {Window::Event::FullscreenKeyPressed}, {}, {Window::Event::FullscreenKeyPressed}, {}};
     const GameRun run{graphics};
     REQUIRE(graphics.record.fullscreenSwitches == 2);
     REQUIRE(graphics.record.frames.size() == 4);
@@ -215,7 +215,7 @@ TEST_CASE("Each F11 press switches fullscreen once, and the game keeps drawing",
 TEST_CASE("Switching fullscreen keeps the title with the renderer's name", "[game][fullscreen]") {
     FakeGraphicsSystem graphics;
     graphics.rendererName = "OpenGL";
-    graphics.events = {{WindowEvent::FullscreenKeyPressed}, {}};
+    graphics.events = {{Window::Event::FullscreenKeyPressed}, {}};
     const GameRun run{graphics, Backend::OpenGL, WindowMode::Fullscreen};
     REQUIRE(graphics.record.fullscreenSwitches == 1);
     REQUIRE(
@@ -224,7 +224,7 @@ TEST_CASE("Switching fullscreen keeps the title with the renderer's name", "[gam
 }
 
 TEST_CASE("In fullscreen, Esc and the close button still end the game", "[game][fullscreen]") {
-    for (const auto quit : {WindowEvent::EscapePressed, WindowEvent::CloseRequested}) {
+    for (const auto quit : {Window::Event::EscapePressed, Window::Event::CloseRequested}) {
         FakeGraphicsSystem graphics;
         graphics.events = {{}, {quit}, {}};
         const GameRun run{graphics, std::nullopt, WindowMode::Fullscreen};

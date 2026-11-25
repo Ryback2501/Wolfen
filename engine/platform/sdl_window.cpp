@@ -26,12 +26,12 @@ std::string sdlError(std::string_view whatFailed) {
     return std::string{whatFailed} + ": " + SDL_GetError();
 }
 
-// Adds the WindowEvent an SDL event stands for, if any.
-void addWindowEvent(const SDL_Event& event, std::vector<WindowEvent>& events) {
+// Adds the Window::Event an SDL event stands for, if any.
+void addWindowEvent(const SDL_Event& event, std::vector<Window::Event>& events) {
     switch (event.type) {
     case SDL_EVENT_QUIT:
     case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
-        events.push_back(WindowEvent::CloseRequested);
+        events.push_back(Window::Event::CloseRequested);
         break;
     case SDL_EVENT_KEY_DOWN:
         // A key held down repeats; only the first press counts.
@@ -39,24 +39,24 @@ void addWindowEvent(const SDL_Event& event, std::vector<WindowEvent>& events) {
             break;
         }
         if (event.key.key == SDLK_ESCAPE) {
-            events.push_back(WindowEvent::EscapePressed);
+            events.push_back(Window::Event::EscapePressed);
         } else if (event.key.key == SDLK_F11) {
-            events.push_back(WindowEvent::FullscreenKeyPressed);
+            events.push_back(Window::Event::FullscreenKeyPressed);
         }
         break;
     case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
-        events.push_back(WindowEvent::Resized);
+        events.push_back(Window::Event::Resized);
         break;
     case SDL_EVENT_WINDOW_MINIMIZED:
     case SDL_EVENT_WINDOW_OCCLUDED:
     case SDL_EVENT_WINDOW_HIDDEN:
-        events.push_back(WindowEvent::Hidden);
+        events.push_back(Window::Event::Hidden);
         break;
     case SDL_EVENT_WINDOW_RESTORED:
     case SDL_EVENT_WINDOW_MAXIMIZED:
     case SDL_EVENT_WINDOW_EXPOSED:
     case SDL_EVENT_WINDOW_SHOWN:
-        events.push_back(WindowEvent::Shown);
+        events.push_back(Window::Event::Shown);
         break;
     default:
         break;
@@ -96,7 +96,7 @@ SDL_DisplayID displayFor(const Screen& saved) {
 
 } // namespace
 
-SdlWindow::SdlWindow(const WindowSettings& settings) {
+SdlWindow::SdlWindow(const Window::Settings& settings) {
     if (settings.mode == WindowMode::Fullscreen) {
         firstWindowedSize_ = settings.size;
     }
@@ -140,8 +140,8 @@ SdlWindow::~SdlWindow() {
     SDL_Quit();
 }
 
-std::vector<WindowEvent> SdlWindow::pollEvents() {
-    std::vector<WindowEvent> events;
+std::vector<Window::Event> SdlWindow::pollEvents() {
+    std::vector<Window::Event> events;
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
         if (event.type == SDL_EVENT_WINDOW_LEAVE_FULLSCREEN) {
@@ -153,7 +153,7 @@ std::vector<WindowEvent> SdlWindow::pollEvents() {
     return events;
 }
 
-std::vector<WindowEvent> SdlWindow::waitEvents() {
+std::vector<Window::Event> SdlWindow::waitEvents() {
     // Sleeps until there is an event and leaves it in the queue, so pollEvents() takes it with the
     // rest. If waiting fails, the queue is polled as it is.
     SDL_WaitEvent(nullptr);
@@ -220,22 +220,22 @@ Screen SdlWindow::screen() const {
     return display == 0 ? Screen{} : screenOf(display);
 }
 
-NativeWindow SdlWindow::nativeWindow() const {
+Window::NativeHandles SdlWindow::nativeHandles() const {
     const SDL_PropertiesID properties = SDL_GetWindowProperties(window_);
 #ifdef _WIN32
-    return {.kind = NativeWindow::Kind::Windows,
+    return {.kind = Window::NativeHandles::Kind::Windows,
             .window =
                 SDL_GetPointerProperty(properties, SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr),
             .display = nullptr};
 #elif defined(__APPLE__)
-    return {.kind = NativeWindow::Kind::Cocoa,
+    return {.kind = Window::NativeHandles::Kind::Cocoa,
             .window =
                 SDL_GetPointerProperty(properties, SDL_PROP_WINDOW_COCOA_WINDOW_POINTER, nullptr),
             .display = nullptr};
 #else
     const std::string_view driver{SDL_GetCurrentVideoDriver()};
     if (driver == "wayland") {
-        return {.kind = NativeWindow::Kind::Wayland,
+        return {.kind = Window::NativeHandles::Kind::Wayland,
                 .window = SDL_GetPointerProperty(properties,
                                                  SDL_PROP_WINDOW_WAYLAND_SURFACE_POINTER, nullptr),
                 .display = SDL_GetPointerProperty(
@@ -247,7 +247,7 @@ NativeWindow SdlWindow::nativeWindow() const {
     // An X11 window is a number, which the renderer expects in a pointer-sized handle.
     const auto x11Window = static_cast<std::uintptr_t>(
         SDL_GetNumberProperty(properties, SDL_PROP_WINDOW_X11_WINDOW_NUMBER, 0));
-    return {.kind = NativeWindow::Kind::X11,
+    return {.kind = Window::NativeHandles::Kind::X11,
             .window = std::bit_cast<void*>(x11Window),
             .display =
                 SDL_GetPointerProperty(properties, SDL_PROP_WINDOW_X11_DISPLAY_POINTER, nullptr)};

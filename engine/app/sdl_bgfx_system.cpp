@@ -6,7 +6,7 @@
 namespace wolfen::engine::app {
 
 std::unique_ptr<platform::Window>
-SdlBgfxSystem::openWindow(const platform::WindowSettings& settings) {
+SdlBgfxSystem::openWindow(const platform::Window::Settings& settings) {
     return std::make_unique<platform::SdlWindow>(settings);
 }
 
