@@ -1,27 +1,30 @@
 name: Deploy (dev)
 
-# Fires on every push to dev. A gated hook for publishing a dev/preview environment
-# once one is wired up. Off by default (DEV_DEPLOY_ENABLED repo variable). Generalized
-# from Mockscii — replace the placeholder step with the real preview deploy when ready.
+# Runs after each merge into dev: pr-work-to-dev.yml calls it (a merge made with the
+# built-in token starts no workflow on its own), or run it by hand from the Actions tab.
+# A gated hook for publishing a dev/preview environment once one is wired up. Off by
+# default (DEV_DEPLOY_ENABLED repo variable). Generalized from Mockscii — replace the
+# placeholder step with the real preview deploy when ready.
 
 on:
-  push:
-    branches: [dev]
+  workflow_call: {}
+  workflow_dispatch: {}
 
 permissions:
   contents: read
-
-concurrency:
-  group: deploy-dev
-  cancel-in-progress: false
 
 jobs:
   deploy:
     name: Deploy preview (dev, gated)
     runs-on: ubuntu-latest
     if: vars.DEV_DEPLOY_ENABLED == 'true'
+    concurrency:
+      group: deploy-dev
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: dev                    # the merged dev, not the PR that triggered the caller
       - run: 'echo "TODO: publish a dev preview of the built output when a dev environment is wired up."'
 
   deploy-disabled:
