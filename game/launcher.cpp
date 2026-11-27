@@ -59,12 +59,12 @@ int Launcher::run(std::span<const std::string_view> args) {
         saveScreen(settingsFile, game.screenAtQuit());
         return 0;
     case Game::Outcome::ChosenGraphicsApiFailed:
-        *err_ << "Renderer '"
+        *err_ << "Graphics API '"
               << CommandLine::graphicsApiName(graphicsApi.value_or(GraphicsApi::Other))
               << "' could not be started on this computer.\n";
         return 1;
-    case Game::Outcome::NoCpuRenderer:
-        *err_ << "No renderer can draw with the CPU on this computer.\n";
+    case Game::Outcome::NoCpuGraphicsApi:
+        *err_ << "No graphics API can draw with the CPU on this computer.\n";
         return 1;
     case Game::Outcome::CouldNotStart:
         break; // the game has already said why

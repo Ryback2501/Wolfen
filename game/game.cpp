@@ -84,7 +84,7 @@ Game::Outcome Game::runOnCpu(WindowMode windowMode, const Screen& screen) {
                 }
             });
     }
-    return runWith(windowMode, screen, rendererStarts, Outcome::NoCpuRenderer);
+    return runWith(windowMode, screen, rendererStarts, Outcome::NoCpuGraphicsApi);
 }
 
 Game::Outcome Game::runWith(WindowMode windowMode, const Screen& screen,

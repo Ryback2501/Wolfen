@@ -26,7 +26,7 @@ class Game {
         Ended,                   // played until the player closed it
         ChosenGraphicsApiFailed, // the graphics API it was given could not start; nothing on stderr
         CouldNotStart,           // it could not start; "Wolfen could not start: ..." was printed
-        NoCpuRenderer,           // no renderer could start on a CPU device; nothing on stderr
+        NoCpuGraphicsApi,        // no graphics API could start on a CPU device; nothing on stderr
     };
 
     Game(std::ostream& out, std::ostream& err, engine::app::GraphicsSystem& graphicsSystem);
@@ -44,8 +44,8 @@ class Game {
     Outcome run();
     // Runs the game like run(), but drawing with the CPU: on the first graphics API, in the order
     // Vulkan, Direct3D 11, Direct3D 12 and among those this computer supports, that starts on a
-    // CPU device. Each try has a window of its own. Ends with NoCpuRenderer, no window left open,
-    // when none does.
+    // CPU device. Each try has a window of its own. Ends with NoCpuGraphicsApi, no window left
+    // open, when none does.
     Outcome runOnCpu(engine::platform::WindowMode windowMode,
                      const engine::platform::Screen& screen);
 
