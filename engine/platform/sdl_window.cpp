@@ -97,8 +97,8 @@ SDL_DisplayID displayFor(const Screen& saved) {
 } // namespace
 
 SdlWindow::SdlWindow(const Window::Settings& settings) {
-    if (settings.mode == WindowMode::Fullscreen) {
-        firstWindowedSize_ = settings.size;
+    if (settings.windowMode == WindowMode::Fullscreen) {
+        firstWindowedSize_ = settings.windowedSize;
     }
 #ifdef __linux__
     // Wayland first, X11 as the fallback. On a Wayland desktop the X11 route (through XWayland)
@@ -113,18 +113,20 @@ SdlWindow::SdlWindow(const Window::Settings& settings) {
     const auto centred =
         static_cast<std::int64_t>(SDL_WINDOWPOS_CENTERED_DISPLAY(displayFor(settings.screen)));
     SDL_SetStringProperty(properties, SDL_PROP_WINDOW_CREATE_TITLE_STRING, settings.title.c_str());
-    SDL_SetNumberProperty(properties, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, settings.size.width);
-    SDL_SetNumberProperty(properties, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, settings.size.height);
+    SDL_SetNumberProperty(properties, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER,
+                          settings.windowedSize.width);
+    SDL_SetNumberProperty(properties, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER,
+                          settings.windowedSize.height);
     SDL_SetNumberProperty(properties, SDL_PROP_WINDOW_CREATE_X_NUMBER, centred);
     SDL_SetNumberProperty(properties, SDL_PROP_WINDOW_CREATE_Y_NUMBER, centred);
     SDL_SetBooleanProperty(properties, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN,
-                           settings.resizable);
+                           settings.isResizable);
     SDL_SetBooleanProperty(properties, SDL_PROP_WINDOW_CREATE_HIGH_PIXEL_DENSITY_BOOLEAN, true);
     // Fullscreen covers the screen that holds the window's centre: the chosen one, as the window
     // is centred there. No fullscreen mode is ever set, so it is borderless at the screen's own
     // resolution and the screen's mode never changes.
     SDL_SetBooleanProperty(properties, SDL_PROP_WINDOW_CREATE_FULLSCREEN_BOOLEAN,
-                           settings.mode == WindowMode::Fullscreen);
+                           settings.windowMode == WindowMode::Fullscreen);
     window_ = SDL_CreateWindowWithProperties(properties);
     SDL_DestroyProperties(properties);
 

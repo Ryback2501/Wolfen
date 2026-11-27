@@ -96,9 +96,9 @@ Game::Outcome Game::runWith(WindowMode windowMode, const Screen& screen,
         for (const RendererStart& rendererStart : rendererStarts) {
             // Declared in this order so the renderer is destroyed before the window it draws into.
             const auto window = graphicsSystem_->openWindow({.title = title,
-                                                             .size = windowSize,
-                                                             .resizable = true,
-                                                             .mode = windowMode,
+                                                             .windowedSize = windowSize,
+                                                             .isResizable = true,
+                                                             .windowMode = windowMode,
                                                              .screen = screen});
             const std::unique_ptr<Renderer> renderer = rendererStart(*window);
             if (!renderer) {

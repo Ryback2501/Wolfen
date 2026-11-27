@@ -69,7 +69,7 @@ void requireFullscreenStart(std::initializer_list<std::string_view> args,
     const LauncherRun run{graphicsSystem, args};
     REQUIRE(run.out() == versionLine());
     REQUIRE(run.err().empty());
-    REQUIRE(graphicsSystem.record.windowSettings.mode == WindowMode::Fullscreen);
+    REQUIRE(graphicsSystem.record.windowSettings.windowMode == WindowMode::Fullscreen);
     REQUIRE(graphicsSystem.record.requestedGraphicsApi == graphicsApi);
     REQUIRE(run.exitCode() == 0);
 }
@@ -360,7 +360,7 @@ TEST_CASE("Without --fullscreen the game starts in a window", "[options][fullscr
                             std::initializer_list<std::string_view>{"--renderer", "vulkan"}}) {
         FakeGraphicsSystem graphicsSystem;
         const LauncherRun run{graphicsSystem, args};
-        REQUIRE(graphicsSystem.record.windowSettings.mode == WindowMode::Windowed);
+        REQUIRE(graphicsSystem.record.windowSettings.windowMode == WindowMode::Windowed);
         REQUIRE(run.exitCode() == 0);
     }
 }
@@ -369,7 +369,7 @@ TEST_CASE("In fullscreen, Esc quits with exit code 0", "[options][fullscreen]") 
     FakeGraphicsSystem graphicsSystem;
     graphicsSystem.events = {{}, {Window::Event::EscapePressed}};
     const LauncherRun run{graphicsSystem, {"--fullscreen"}};
-    REQUIRE(graphicsSystem.record.windowSettings.mode == WindowMode::Fullscreen);
+    REQUIRE(graphicsSystem.record.windowSettings.windowMode == WindowMode::Fullscreen);
     REQUIRE(graphicsSystem.record.frames.size() == 1);
     REQUIRE(run.exitCode() == 0);
 }
@@ -428,7 +428,7 @@ TEST_CASE("Fullscreen is not remembered: after quitting fullscreen, the next sta
 
     FakeGraphicsSystem next;
     const LauncherRun nextRun{next, folder.path(), {}};
-    REQUIRE(next.record.windowSettings.mode == WindowMode::Windowed);
+    REQUIRE(next.record.windowSettings.windowMode == WindowMode::Windowed);
     REQUIRE(next.record.windowSettings.screen == first.screen);
 }
 
@@ -562,7 +562,7 @@ TEST_CASE("The --software option combines with --fullscreen in any order",
     graphicsSystem.cpuGraphicsApis = {GraphicsApi::Vulkan};
     graphicsSystem.events = {{Window::Event::FullscreenKeyPressed}, {}};
     const LauncherRun run{graphicsSystem, {"--fullscreen", "--software"}};
-    REQUIRE(graphicsSystem.record.windowSettings.mode == WindowMode::Fullscreen);
+    REQUIRE(graphicsSystem.record.windowSettings.windowMode == WindowMode::Fullscreen);
     REQUIRE(graphicsSystem.record.fullscreenSwitches == 1);
     REQUIRE(graphicsSystem.record.titles ==
             std::vector<std::string>{titleWith("Vulkan, software")});

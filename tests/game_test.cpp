@@ -37,10 +37,10 @@ TEST_CASE("The window opens 1280x720, resizable, titled with the version", "[gam
     const GameRun run{graphicsSystem};
     REQUIRE_FALSE(graphicsSystem.record.steps.empty());
     REQUIRE(graphicsSystem.record.steps.front() == "open window");
-    const auto& settings = graphicsSystem.record.windowSettings;
-    REQUIRE(settings.size == Size{.width = 1280, .height = 720});
-    REQUIRE(settings.resizable);
-    REQUIRE(settings.title == "Wolfen " + std::string{Version::current().text()});
+    const auto& windowSettings = graphicsSystem.record.windowSettings;
+    REQUIRE(windowSettings.windowedSize == Size{.width = 1280, .height = 720});
+    REQUIRE(windowSettings.isResizable);
+    REQUIRE(windowSettings.title == "Wolfen " + std::string{Version::current().text()});
 }
 
 TEST_CASE("The title shows the version and the renderer in use", "[game]") {
@@ -185,7 +185,7 @@ TEST_CASE("A given renderer that fails to start: reported, nothing printed, wind
 TEST_CASE("Given no window mode, the game opens a window, not fullscreen", "[game][fullscreen]") {
     FakeGraphicsSystem graphicsSystem;
     const GameRun run{graphicsSystem};
-    REQUIRE(graphicsSystem.record.windowSettings.mode == WindowMode::Windowed);
+    REQUIRE(graphicsSystem.record.windowSettings.windowMode == WindowMode::Windowed);
 }
 
 TEST_CASE("Asked for fullscreen, the game opens its window fullscreen, 1280x720 for later",
@@ -194,10 +194,10 @@ TEST_CASE("Asked for fullscreen, the game opens its window fullscreen, 1280x720 
          {std::optional<GraphicsApi>{}, std::optional<GraphicsApi>{GraphicsApi::OpenGL}}) {
         FakeGraphicsSystem graphicsSystem;
         const GameRun run{graphicsSystem, graphicsApi, WindowMode::Fullscreen};
-        const auto& settings = graphicsSystem.record.windowSettings;
-        REQUIRE(settings.mode == WindowMode::Fullscreen);
+        const auto& windowSettings = graphicsSystem.record.windowSettings;
+        REQUIRE(windowSettings.windowMode == WindowMode::Fullscreen);
         // The size the window gets when it first leaves fullscreen.
-        REQUIRE(settings.size == Size{.width = 1280, .height = 720});
+        REQUIRE(windowSettings.windowedSize == Size{.width = 1280, .height = 720});
         REQUIRE(graphicsSystem.record.requestedGraphicsApi == graphicsApi);
         REQUIRE(run.outcome() == Game::Outcome::Ended);
     }
@@ -230,7 +230,7 @@ TEST_CASE("In fullscreen, Esc and the close button still end the game", "[game][
         FakeGraphicsSystem graphicsSystem;
         graphicsSystem.events = {{}, {quit}, {}};
         const GameRun run{graphicsSystem, std::nullopt, WindowMode::Fullscreen};
-        REQUIRE(graphicsSystem.record.windowSettings.mode == WindowMode::Fullscreen);
+        REQUIRE(graphicsSystem.record.windowSettings.windowMode == WindowMode::Fullscreen);
         REQUIRE(graphicsSystem.record.frames.size() == 1);
         REQUIRE(run.outcome() == Game::Outcome::Ended);
     }
