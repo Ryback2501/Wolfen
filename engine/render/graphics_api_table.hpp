@@ -28,12 +28,14 @@ class GraphicsApiTable {
 
     // The row for a graphics API, or null for GraphicsApi::Other.
     static constexpr const Row* row(GraphicsApi graphicsApi) {
-        return firstRow([graphicsApi](const Row& row) { return row.graphicsApi == graphicsApi; });
+        return firstRow(
+            [graphicsApi](const Row& candidate) { return candidate.graphicsApi == graphicsApi; });
     }
 
     // The row for a bgfx renderer type, or null for a type Wolfen does not name.
     static constexpr const Row* row(bgfx::RendererType::Enum bgfxType) {
-        return firstRow([bgfxType](const Row& row) { return row.bgfxType == bgfxType; });
+        return firstRow(
+            [bgfxType](const Row& candidate) { return candidate.bgfxType == bgfxType; });
     }
 
   private:
@@ -57,9 +59,9 @@ class GraphicsApiTable {
     // The first row that `matches` accepts, or null. A plain loop returning a pointer, so the code
     // does not depend on whether the library's array iterators are pointers.
     template <typename Matches> static constexpr const Row* firstRow(const Matches& matches) {
-        for (const Row& row : rows_) {
-            if (matches(row)) {
-                return &row;
+        for (const Row& candidate : rows_) {
+            if (matches(candidate)) {
+                return &candidate;
             }
         }
         return nullptr;
