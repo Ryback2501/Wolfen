@@ -20,7 +20,7 @@ class Launcher {
   public:
     // gameFolder: the folder that holds the game's executable, where the settings file is kept;
     // nullopt when the system cannot say where it is.
-    Launcher(std::ostream& out, std::ostream& err, engine::app::GraphicsSystem& graphics,
+    Launcher(std::ostream& out, std::ostream& err, engine::app::GraphicsSystem& graphicsSystem,
              std::optional<std::filesystem::path> gameFolder);
 
     // Handles the given start options (without the program's name); returns the program's exit
@@ -37,7 +37,7 @@ class Launcher {
 
     std::ostream* out_;
     std::ostream* err_;
-    engine::app::GraphicsSystem* graphics_;
+    engine::app::GraphicsSystem* graphicsSystem_;
     std::optional<std::filesystem::path> gameFolder_;
 };
 

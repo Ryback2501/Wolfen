@@ -29,7 +29,7 @@ class Game {
         NoCpuRenderer,           // no renderer could start on a CPU device; nothing on stderr
     };
 
-    Game(std::ostream& out, std::ostream& err, engine::app::GraphicsSystem& graphics);
+    Game(std::ostream& out, std::ostream& err, engine::app::GraphicsSystem& graphicsSystem);
 
     // "Wolfen" and the version, for example "Wolfen v1.2.3".
     [[nodiscard]] static std::string name();
@@ -69,7 +69,7 @@ class Game {
 
     std::ostream* out_;
     std::ostream* err_;
-    engine::app::GraphicsSystem* graphics_;
+    engine::app::GraphicsSystem* graphicsSystem_;
     engine::platform::Screen screenAtQuit_;
 };
 

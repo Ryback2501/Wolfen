@@ -37,8 +37,8 @@ constexpr std::array cpuGraphicsApis{GraphicsApi::Vulkan, GraphicsApi::Direct3D1
 
 } // namespace
 
-Game::Game(std::ostream& out, std::ostream& err, GraphicsSystem& graphics)
-    : out_{&out}, err_{&err}, graphics_{&graphics} {}
+Game::Game(std::ostream& out, std::ostream& err, GraphicsSystem& graphicsSystem)
+    : out_{&out}, err_{&err}, graphicsSystem_{&graphicsSystem} {}
 
 std::string Game::name() {
     return "Wolfen " + std::string{Version::current().text()};
@@ -57,7 +57,7 @@ Game::Outcome Game::run(std::optional<GraphicsApi> graphicsApi, WindowMode windo
     const std::array<RendererStart, 1> rendererStarts{
         [this, graphicsApi](Window& window) -> std::unique_ptr<Renderer> {
             try {
-                return graphics_->startRenderer(window, graphicsApi);
+                return graphicsSystem_->startRenderer(window, graphicsApi);
             } catch (const StartupError&) {
                 if (!graphicsApi) {
                     throw; // the best renderer for this computer: the game could not start
@@ -69,7 +69,7 @@ Game::Outcome Game::run(std::optional<GraphicsApi> graphicsApi, WindowMode windo
 }
 
 Game::Outcome Game::runOnCpu(WindowMode windowMode, const Screen& screen) {
-    const std::vector<GraphicsApi> availableGraphicsApis = graphics_->availableGraphicsApis();
+    const std::vector<GraphicsApi> availableGraphicsApis = graphicsSystem_->availableGraphicsApis();
     std::vector<RendererStart> rendererStarts;
     for (const GraphicsApi graphicsApi : cpuGraphicsApis) {
         if (std::ranges::find(availableGraphicsApis, graphicsApi) == availableGraphicsApis.end()) {
@@ -78,7 +78,7 @@ Game::Outcome Game::runOnCpu(WindowMode windowMode, const Screen& screen) {
         rendererStarts.emplace_back(
             [this, graphicsApi](Window& window) -> std::unique_ptr<Renderer> {
                 try {
-                    return graphics_->startCpuRenderer(window, graphicsApi);
+                    return graphicsSystem_->startCpuRenderer(window, graphicsApi);
                 } catch (const StartupError&) {
                     return nullptr; // no CPU device for this one: the next one is tried
                 }
@@ -95,11 +95,11 @@ Game::Outcome Game::runWith(WindowMode windowMode, const Screen& screen,
     try {
         for (const RendererStart& rendererStart : rendererStarts) {
             // Declared in this order so the renderer is destroyed before the window it draws into.
-            const auto window = graphics_->openWindow({.title = title,
-                                                       .size = windowSize,
-                                                       .resizable = true,
-                                                       .mode = windowMode,
-                                                       .screen = screen});
+            const auto window = graphicsSystem_->openWindow({.title = title,
+                                                             .size = windowSize,
+                                                             .resizable = true,
+                                                             .mode = windowMode,
+                                                             .screen = screen});
             const std::unique_ptr<Renderer> renderer = rendererStart(*window);
             if (!renderer) {
                 continue; // its window closes here, before the next try opens a new one

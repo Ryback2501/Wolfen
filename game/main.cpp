@@ -9,8 +9,8 @@ using wolfen::engine::platform::GameFolder;
 using wolfen::game::Launcher;
 
 int main(int argc, char* argv[]) {
-    SdlBgfxSystem graphics;
+    SdlBgfxSystem graphicsSystem;
     const GameFolder gameFolder;
-    Launcher launcher{std::cout, std::cerr, graphics, gameFolder.path()};
+    Launcher launcher{std::cout, std::cerr, graphicsSystem, gameFolder.path()};
     return launcher.run(argc, argv);
 }

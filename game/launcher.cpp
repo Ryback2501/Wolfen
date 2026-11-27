@@ -19,12 +19,13 @@ using engine::app::GraphicsSystem;
 using engine::platform::Screen;
 using engine::render::GraphicsApi;
 
-Launcher::Launcher(std::ostream& out, std::ostream& err, GraphicsSystem& graphics,
+Launcher::Launcher(std::ostream& out, std::ostream& err, GraphicsSystem& graphicsSystem,
                    std::optional<std::filesystem::path> gameFolder)
-    : out_{&out}, err_{&err}, graphics_{&graphics}, gameFolder_{std::move(gameFolder)} {}
+    : out_{&out}, err_{&err}, graphicsSystem_{&graphicsSystem}, gameFolder_{std::move(gameFolder)} {
+}
 
 int Launcher::run(std::span<const std::string_view> args) {
-    const std::vector<GraphicsApi> availableGraphicsApis = graphics_->availableGraphicsApis();
+    const std::vector<GraphicsApi> availableGraphicsApis = graphicsSystem_->availableGraphicsApis();
     const CommandLine commandLine{args, availableGraphicsApis};
 
     switch (commandLine.action()) {
@@ -49,7 +50,7 @@ int Launcher::run(std::span<const std::string_view> args) {
     const Screen screen = settingsFile ? settingsFile->screen() : Screen{};
 
     const std::optional<GraphicsApi> graphicsApi = commandLine.graphicsApi();
-    Game game{*out_, *err_, *graphics_};
+    Game game{*out_, *err_, *graphicsSystem_};
     const Game::Outcome outcome = commandLine.isSoftwareAsked()
                                       ? game.runOnCpu(commandLine.windowMode(), screen)
                                       : game.run(graphicsApi, commandLine.windowMode(), screen);
