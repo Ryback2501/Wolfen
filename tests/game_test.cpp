@@ -45,7 +45,7 @@ TEST_CASE("The window opens 1280x720, resizable, titled with the version", "[gam
 
 TEST_CASE("The title shows the version and the renderer in use", "[game]") {
     FakeGraphicsSystem graphicsSystem;
-    graphicsSystem.rendererName = "Vulkan";
+    graphicsSystem.rendererDisplayName = "Vulkan";
     const GameRun run{graphicsSystem};
     REQUIRE_FALSE(graphicsSystem.record.titles.empty());
     REQUIRE(graphicsSystem.record.titles.back() ==
@@ -216,7 +216,7 @@ TEST_CASE("Each F11 press switches fullscreen once, and the game keeps drawing",
 
 TEST_CASE("Switching fullscreen keeps the title with the renderer's name", "[game][fullscreen]") {
     FakeGraphicsSystem graphicsSystem;
-    graphicsSystem.rendererName = "OpenGL";
+    graphicsSystem.rendererDisplayName = "OpenGL";
     graphicsSystem.events = {{Window::Event::FullscreenKeyPressed}, {}};
     const GameRun run{graphicsSystem, GraphicsApi::OpenGL, WindowMode::Fullscreen};
     REQUIRE(graphicsSystem.record.fullscreenSwitches == 1);

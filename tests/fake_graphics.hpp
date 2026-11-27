@@ -97,8 +97,8 @@ class FakeWindow final : public engine::platform::Window {
 // A renderer that draws nothing and records every frame.
 class FakeRenderer final : public engine::render::Renderer {
   public:
-    FakeRenderer(GraphicsRecord& record, std::string name, bool drawsWithCpu)
-        : record_{&record}, name_{std::move(name)}, drawsWithCpu_{drawsWithCpu} {}
+    FakeRenderer(GraphicsRecord& record, std::string displayName, bool drawsWithCpu)
+        : record_{&record}, displayName_{std::move(displayName)}, drawsWithCpu_{drawsWithCpu} {}
     FakeRenderer(const FakeRenderer&) = delete;
     FakeRenderer& operator=(const FakeRenderer&) = delete;
     FakeRenderer(FakeRenderer&&) = delete;
@@ -107,8 +107,8 @@ class FakeRenderer final : public engine::render::Renderer {
         record_->steps.emplace_back("close renderer");
     }
 
-    [[nodiscard]] std::string_view name() const override {
-        return name_;
+    [[nodiscard]] std::string_view displayName() const override {
+        return displayName_;
     }
     [[nodiscard]] bool drawsWithCpu() const override {
         return drawsWithCpu_;
@@ -122,7 +122,7 @@ class FakeRenderer final : public engine::render::Renderer {
 
   private:
     GraphicsRecord* record_;
-    std::string name_;
+    std::string displayName_;
     bool drawsWithCpu_;
 };
 
@@ -133,7 +133,7 @@ class FakeGraphicsSystem final : public engine::app::GraphicsSystem {
     std::deque<std::vector<engine::platform::Window::Event>> events; // one batch per poll
     engine::Size pixelSize{.width = 1280, .height = 720};            // when the window opens
     engine::Size sizeAfterResize{.width = 1280, .height = 720}; // from the first Resized event on
-    std::string rendererName{"Fake"};
+    std::string rendererDisplayName{"Fake"};
     bool rendererDrawsWithCpu{false}; // whether startRenderer() ends up on a CPU device
     // The graphics APIs that can start on a CPU device; startCpuRenderer() fails for the others.
     std::vector<engine::render::GraphicsApi> cpuGraphicsApis;
@@ -171,7 +171,7 @@ class FakeGraphicsSystem final : public engine::app::GraphicsSystem {
         if (rendererFailure) {
             throw engine::StartupError{*rendererFailure};
         }
-        return std::make_unique<FakeRenderer>(record, rendererName, rendererDrawsWithCpu);
+        return std::make_unique<FakeRenderer>(record, rendererDisplayName, rendererDrawsWithCpu);
     }
 
     std::unique_ptr<engine::render::Renderer>

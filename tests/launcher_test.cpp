@@ -607,7 +607,7 @@ TEST_CASE("When no renderer can draw with the CPU: one message, no window left o
 TEST_CASE("Without --software, a renderer on the graphics card has no ', software' in the title",
           "[software]") {
     FakeGraphicsSystem graphicsSystem;
-    graphicsSystem.rendererName = "Vulkan";
+    graphicsSystem.rendererDisplayName = "Vulkan";
     const LauncherRun run{graphicsSystem, {}};
     REQUIRE(graphicsSystem.record.cpuTries.empty());
     REQUIRE(graphicsSystem.record.titles == std::vector<std::string>{titleWith("Vulkan")});
@@ -616,7 +616,7 @@ TEST_CASE("Without --software, a renderer on the graphics card has no ', softwar
 TEST_CASE("Without --software, a renderer that ends up on a CPU device says so in the title",
           "[software]") {
     FakeGraphicsSystem graphicsSystem;
-    graphicsSystem.rendererName = "Vulkan";
+    graphicsSystem.rendererDisplayName = "Vulkan";
     graphicsSystem.rendererDrawsWithCpu = true; // as on a virtual machine with no graphics card
     const LauncherRun run{graphicsSystem, {}};
     REQUIRE(graphicsSystem.record.titles ==

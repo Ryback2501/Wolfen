@@ -105,7 +105,7 @@ Game::Outcome Game::runWith(WindowMode windowMode, const Screen& screen,
                 continue; // its window closes here, before the next try opens a new one
             }
             const std::string_view softwareSuffix = renderer->drawsWithCpu() ? ", software" : "";
-            window->setTitle(title + " (" + std::string{renderer->name()} +
+            window->setTitle(title + " (" + std::string{renderer->displayName()} +
                              std::string{softwareSuffix} + ")");
             play(*window, *renderer);
             screenAtQuit_ = window->screen(); // while the window is still open

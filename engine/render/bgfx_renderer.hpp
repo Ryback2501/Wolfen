@@ -38,13 +38,13 @@ class BgfxRenderer final : public Renderer {
     BgfxRenderer& operator=(BgfxRenderer&&) = delete;
     ~BgfxRenderer() override;
 
-    [[nodiscard]] std::string_view name() const override;
+    [[nodiscard]] std::string_view displayName() const override;
     [[nodiscard]] bool drawsWithCpu() const override;
     void resize(Size pixelSize) override;
     void drawFrame(Colour backgroundColour) override;
 
   private:
-    std::string name_;
+    std::string displayName_;
     bool drawsWithCpu_{};
 };
 

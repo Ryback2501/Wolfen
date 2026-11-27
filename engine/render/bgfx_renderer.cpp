@@ -146,7 +146,8 @@ BgfxRenderer::BgfxRenderer(const platform::Window& window, std::optional<Graphic
     // bgfx down here before the window it draws into goes away.
     try {
         const bgfx::RendererType::Enum type = bgfx::getRendererType();
-        name_ = GraphicsApiName::displayName(graphicsApiOf(type), bgfx::getRendererName(type));
+        displayName_ =
+            GraphicsApiName::displayName(graphicsApiOf(type), bgfx::getRendererName(type));
         drawsWithCpu_ = drawsOnCpu(*bgfx::getCaps());
         if (device == Device::Cpu && !drawsWithCpu_) {
             // bgfx falls back to a graphics card when it finds no CPU device.
@@ -163,8 +164,8 @@ BgfxRenderer::~BgfxRenderer() {
     bgfx::shutdown();
 }
 
-std::string_view BgfxRenderer::name() const {
-    return name_;
+std::string_view BgfxRenderer::displayName() const {
+    return displayName_;
 }
 
 bool BgfxRenderer::drawsWithCpu() const {
