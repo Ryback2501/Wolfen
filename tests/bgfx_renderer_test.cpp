@@ -35,7 +35,7 @@ TEST_CASE("Outside Windows, Direct3D is never reported as available", "[renderer
 #endif
 }
 
-TEST_CASE("bgfx reports at least one renderer Wolfen can name", "[renderer]") {
+TEST_CASE("bgfx reports at least one graphics API Wolfen can name", "[renderer]") {
     // Every platform Wolfen builds for has at least Vulkan, OpenGL, Metal or Direct3D compiled in.
     REQUIRE_FALSE(BgfxRenderer::availableGraphicsApis().empty());
 }

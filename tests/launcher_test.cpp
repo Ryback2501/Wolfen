@@ -196,7 +196,7 @@ TEST_CASE("The --help option wins over a wrong option and over --version", "[opt
     }
 }
 
-TEST_CASE("The usage lists only the renderers available on this computer, in a fixed order",
+TEST_CASE("The usage lists only the graphics APIs available on this computer, in a fixed order",
           "[options][help]") {
     FakeGraphicsSystem graphicsSystem;
     graphicsSystem.available = {GraphicsApi::OpenGL, GraphicsApi::Vulkan, GraphicsApi::Direct3D12};
@@ -236,7 +236,7 @@ TEST_CASE("The --version option wins over wrong and repeated options", "[options
     }
 }
 
-TEST_CASE("The --renderer option starts only the chosen renderer, after the start line",
+TEST_CASE("The --renderer option starts only the chosen graphics API, after the start line",
           "[options][renderer]") {
     for (const auto& [name, graphicsApi] :
          {std::pair{"vulkan", GraphicsApi::Vulkan}, std::pair{"opengl", GraphicsApi::OpenGL}}) {
@@ -249,21 +249,22 @@ TEST_CASE("The --renderer option starts only the chosen renderer, after the star
     }
 }
 
-TEST_CASE("With no options the game lets the engine choose the renderer", "[options][renderer]") {
+TEST_CASE("With no options the game lets the engine choose the graphics API",
+          "[options][renderer]") {
     FakeGraphicsSystem graphicsSystem;
     const LauncherRun run{graphicsSystem, {}};
     REQUIRE_FALSE(graphicsSystem.record.requestedGraphicsApi.has_value());
     REQUIRE(run.exitCode() == 0);
 }
 
-TEST_CASE("A renderer that is not available on this computer", "[options][renderer]") {
+TEST_CASE("A graphics API that is not available on this computer", "[options][renderer]") {
     FakeGraphicsSystem graphicsSystem;
     requireOptionError(graphicsSystem, {"--renderer", "metal"},
                        "Renderer 'metal' is not available on this computer. Available: vulkan, "
                        "opengl");
 }
 
-TEST_CASE("A renderer name Wolfen does not know", "[options][renderer]") {
+TEST_CASE("A graphics API name Wolfen does not know", "[options][renderer]") {
     for (const auto name : {std::string_view{"foo"}, std::string_view{"Vulkan"}}) {
         FakeGraphicsSystem graphicsSystem;
         requireOptionError(graphicsSystem, {"--renderer", name},
@@ -301,7 +302,7 @@ TEST_CASE("Only the first error, reading left to right, is printed", "[options]"
                        "Unknown option '--bogus'");
 }
 
-TEST_CASE("A chosen renderer that fails to start: its own message, exit 1, window closed",
+TEST_CASE("A chosen graphics API that fails to start: its own message, exit 1, window closed",
           "[options][renderer][startup]") {
     FakeGraphicsSystem graphicsSystem;
     graphicsSystem.rendererFailure = "the device could not be created";
@@ -331,8 +332,9 @@ TEST_CASE("Words as the system gives them: 'wolfen --version' prints the version
     REQUIRE(run.exitCode() == 0);
 }
 
-TEST_CASE("Words as the system gives them: 'wolfen' alone plays with no renderer choice, exit 0",
-          "[options][renderer][main]") {
+TEST_CASE(
+    "Words as the system gives them: 'wolfen' alone plays with no graphics API choice, exit 0",
+    "[options][renderer][main]") {
     FakeGraphicsSystem graphicsSystem;
     const LauncherRun run{graphicsSystem, LauncherRun::ProgramNameFirst{}, {"wolfen"}};
     REQUIRE(run.out() == versionLine());
@@ -516,9 +518,10 @@ TEST_CASE("With --software the game draws with the CPU, and the title says so", 
     requireSoftwareStart({"--software"});
 }
 
-TEST_CASE("With --software the renderers that can draw with the CPU are tried in the order Vulkan, "
-          "Direct3D 11, Direct3D 12, each in a window of its own",
-          "[software]") {
+TEST_CASE(
+    "With --software the graphics APIs that can draw with the CPU are tried in the order Vulkan, "
+    "Direct3D 11, Direct3D 12, each in a window of its own",
+    "[software]") {
     FakeGraphicsSystem graphicsSystem;
     graphicsSystem.available = {GraphicsApi::Direct3D12, GraphicsApi::OpenGL,
                                 GraphicsApi::Direct3D11, GraphicsApi::Vulkan};

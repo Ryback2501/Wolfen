@@ -118,7 +118,7 @@ TEST_CASE("A renderer that cannot start: message on stderr, the game could not s
     REQUIRE(graphicsSystem.record.frameColours.empty());
 }
 
-TEST_CASE("Renderer display names", "[renderer]") {
+TEST_CASE("Graphics API display names", "[graphics-api]") {
     REQUIRE(GraphicsApiName::displayName(GraphicsApi::Vulkan, "Vulkan") == "Vulkan");
     REQUIRE(GraphicsApiName::displayName(GraphicsApi::OpenGL, "OpenGL 2.1") == "OpenGL");
     REQUIRE(GraphicsApiName::displayName(GraphicsApi::Metal, "Metal") == "Metal");
@@ -126,7 +126,7 @@ TEST_CASE("Renderer display names", "[renderer]") {
     REQUIRE(GraphicsApiName::displayName(GraphicsApi::Direct3D12, "Direct3D 12") == "Direct3D 12");
 }
 
-TEST_CASE("Any other renderer shows the rendering library's own name", "[renderer]") {
+TEST_CASE("Any other graphics API shows the rendering library's own name", "[graphics-api]") {
     REQUIRE(GraphicsApiName::displayName(GraphicsApi::Other, "Noop") == "Noop");
 }
 
@@ -152,7 +152,8 @@ TEST_CASE("A hidden window can still be closed", "[game]") {
     REQUIRE(run.outcome() == Game::Outcome::Ended);
 }
 
-TEST_CASE("The game starts the renderer it is given, after the start line", "[game][renderer]") {
+TEST_CASE("The game starts on the graphics API it is given, after the start line",
+          "[game][graphics-api]") {
     for (const auto graphicsApi : {GraphicsApi::Vulkan, GraphicsApi::OpenGL}) {
         FakeGraphicsSystem graphicsSystem;
         const GameRun run{graphicsSystem, graphicsApi};
@@ -162,7 +163,7 @@ TEST_CASE("The game starts the renderer it is given, after the start line", "[ga
     }
 }
 
-TEST_CASE("Given no renderer, the game lets the engine choose", "[game][renderer]") {
+TEST_CASE("Given no graphics API, the game lets the engine choose", "[game][graphics-api]") {
     FakeGraphicsSystem graphicsSystem;
     const GameRun run{graphicsSystem, std::nullopt};
     REQUIRE(graphicsSystem.record.steps.size() >= 2);
@@ -171,8 +172,8 @@ TEST_CASE("Given no renderer, the game lets the engine choose", "[game][renderer
     REQUIRE(run.outcome() == Game::Outcome::Ended);
 }
 
-TEST_CASE("A given renderer that fails to start: reported, nothing printed, window closed",
-          "[game][renderer][startup]") {
+TEST_CASE("A given graphics API that fails to start: reported, nothing printed, window closed",
+          "[game][graphics-api][startup]") {
     FakeGraphicsSystem graphicsSystem;
     graphicsSystem.rendererFailure = "the device could not be created";
     const GameRun run{graphicsSystem, GraphicsApi::Vulkan};
