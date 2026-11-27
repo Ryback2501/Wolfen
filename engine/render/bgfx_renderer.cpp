@@ -140,7 +140,7 @@ BgfxRenderer::BgfxRenderer(const platform::Window& window, std::optional<Graphic
     setSwapChainSize(init.swapChain, window.pixelSize());
     init.reset = resetFlags;
     if (!bgfx::init(init)) {
-        throw StartupError{"no renderer could start"};
+        throw StartupError{"no graphics API could start"};
     }
 
     // From here bgfx is running: if anything below fails, the destructor will not run, so shut
@@ -152,7 +152,7 @@ BgfxRenderer::BgfxRenderer(const platform::Window& window, std::optional<Graphic
         drawsWithCpu_ = deviceDrawsWithCpu(*bgfx::getCaps());
         if (device == Device::Cpu && !drawsWithCpu_) {
             // bgfx falls back to a graphics card when it finds no CPU device.
-            throw StartupError{"there is no CPU device for this renderer"};
+            throw StartupError{"there is no CPU device for this graphics API"};
         }
         fitMainViewToWindow();
     } catch (...) {

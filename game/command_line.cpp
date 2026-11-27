@@ -17,7 +17,7 @@ using engine::render::GraphicsApi;
 namespace {
 
 // What a start option does once it is read.
-enum class Option : std::uint8_t { Renderer, Fullscreen, Software, Help, Version };
+enum class Option : std::uint8_t { GraphicsApi, Fullscreen, Software, Help, Version };
 
 // One start option: everything the reading and the usage need to know about it.
 struct OptionRow {
@@ -25,7 +25,7 @@ struct OptionRow {
     std::string_view name;
     // In the usage ("<name>"); empty for an option with no value.
     std::string_view valuePlaceholder;
-    // In the error when the value is missing ("a renderer name").
+    // In the error when the value is missing ("a graphics API name").
     std::string_view valueDescription;
     // In the usage.
     std::string_view helpLine;
@@ -33,11 +33,11 @@ struct OptionRow {
 
 // Every start option, in the order the usage lists them.
 constexpr std::array<OptionRow, 5> options{{
-    {.option = Option::Renderer,
-     .name = "--renderer",
+    {.option = Option::GraphicsApi,
+     .name = "--graphics-api",
      .valuePlaceholder = "<name>",
-     .valueDescription = "a renderer name",
-     .helpLine = "Draw with this renderer. Available on this computer:"},
+     .valueDescription = "a graphics API name",
+     .helpLine = "Draw with this graphics API. Available on this computer:"},
     {.option = Option::Fullscreen,
      .name = "--fullscreen",
      .valuePlaceholder = "",
@@ -78,8 +78,7 @@ std::string shownOption(const OptionRow& row) {
                            : std::string{row.name};
 }
 
-// A graphics API and its name in the --renderer option. Players say "renderer" (the option, the
-// help and the messages); the code calls it GraphicsApi.
+// A graphics API and its name in the --graphics-api option.
 struct NamedGraphicsApi {
     std::string_view name;
     GraphicsApi graphicsApi;
@@ -110,8 +109,8 @@ constexpr const Row* firstRow(const std::array<Row, rowCount>& table, const Matc
 constexpr const OptionRow& helpRow =
     *firstRow(options, [](const OptionRow& row) { return row.option == Option::Help; });
 
-// The software option's row: with it, the renderer option is ignored. Worked out while compiling,
-// like the help row.
+// The software option's row: with it, the graphics API option is ignored. Worked out while
+// compiling, like the help row.
 constexpr const OptionRow& softwareRow =
     *firstRow(options, [](const OptionRow& row) { return row.option == Option::Software; });
 
@@ -135,8 +134,8 @@ std::string availableGraphicsApiNames(std::span<const GraphicsApi> availableGrap
 
 } // namespace
 
-// The software option is read first, because it changes how the renderer option is read wherever
-// that comes. It can never be another option's value, as it starts with '-'.
+// The software option is read first, because it changes how the graphics API option is read
+// wherever that comes. It can never be another option's value, as it starts with '-'.
 CommandLine::CommandLine(std::span<const std::string_view> args,
                          std::span<const GraphicsApi> availableGraphicsApis)
     : isSoftwareAsked_{contains(args, softwareRow.name)} {
@@ -157,7 +156,7 @@ CommandLine::CommandLine(std::span<const std::string_view> args,
             fail("Unknown option '" + std::string{word} + "'");
             continue;
         }
-        if (row->option == Option::Renderer && isSoftwareAsked_) {
+        if (row->option == Option::GraphicsApi && isSoftwareAsked_) {
             // Ignored completely, with its value if one follows: nothing about it is checked.
             if (valueFollows(i)) {
                 ++i;
@@ -184,7 +183,7 @@ CommandLine::CommandLine(std::span<const std::string_view> args,
         }
 
         switch (row->option) {
-        case Option::Renderer:
+        case Option::GraphicsApi:
             readGraphicsApi(value, availableGraphicsApis);
             break;
         case Option::Fullscreen:
@@ -217,8 +216,8 @@ void CommandLine::readGraphicsApi(std::string_view name,
         !contains(availableGraphicsApis, namedGraphicsApi->graphicsApi)) {
         const std::string problem =
             namedGraphicsApi == nullptr
-                ? "Unknown renderer '" + std::string{name} + "'"
-                : "Renderer '" + std::string{name} + "' is not available on this computer";
+                ? "Unknown graphics API '" + std::string{name} + "'"
+                : "Graphics API '" + std::string{name} + "' is not available on this computer";
         fail(problem + ". Available: " + availableGraphicsApiNames(availableGraphicsApis));
         return;
     }
@@ -265,7 +264,7 @@ std::string CommandLine::usage(std::span<const GraphicsApi> availableGraphicsApi
         const std::string shownOptionText = shownOption(row);
         text += "  " + shownOptionText + std::string(helpColumn - shownOptionText.size(), ' ') +
                 std::string{row.helpLine};
-        if (row.option == Option::Renderer) {
+        if (row.option == Option::GraphicsApi) {
             text += " " + availableGraphicsApiNames(availableGraphicsApis);
         }
         text += '\n';

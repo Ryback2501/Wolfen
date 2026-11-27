@@ -32,19 +32,20 @@ using wolfen::tests::versionLine;
 
 namespace {
 
-// The usage text approved for #3, as changed by #4 (the --fullscreen line, and no keys) and #8 (the
-// --software line), with the given list of available graphics APIs.
+// The usage text approved for #3, as changed by #4 (the --fullscreen line, and no keys), #8 (the
+// --software line) and #41 (the --graphics-api line), with the given list of available graphics
+// APIs.
 std::string usage(std::string_view availableNames) {
     return "Usage: wolfen [options]\n"
            "\n"
            "Options:\n"
-           "  --renderer <name>  Draw with this renderer. Available on this computer: " +
+           "  --graphics-api <name>  Draw with this graphics API. Available on this computer: " +
            std::string{availableNames} +
            "\n"
-           "  --fullscreen       Start in borderless fullscreen.\n"
-           "  --software         Draw with the CPU instead of the graphics card.\n"
-           "  --help             Show this help and exit.\n"
-           "  --version          Show the version and exit.\n";
+           "  --fullscreen           Start in borderless fullscreen.\n"
+           "  --software             Draw with the CPU instead of the graphics card.\n"
+           "  --help                 Show this help and exit.\n"
+           "  --version              Show the version and exit.\n";
 }
 
 const std::string usageHere = usage("vulkan, opengl"); // the fake's default available graphics APIs
@@ -161,11 +162,11 @@ void requireSoftwareStart(std::initializer_list<std::string_view> args) {
     REQUIRE(run.exitCode() == 0);
 }
 
-// A start with --software where no renderer can draw with the CPU: one message, no window left
+// A start with --software where no graphics API can draw with the CPU: one message, no window left
 // open, exit 1.
-void requireNoCpuRenderer(FakeGraphicsSystem& graphicsSystem) {
+void requireNoCpuGraphicsApi(FakeGraphicsSystem& graphicsSystem) {
     const LauncherRun run{graphicsSystem, {"--software"}};
-    REQUIRE(run.err() == "No renderer can draw with the CPU on this computer.\n");
+    REQUIRE(run.err() == "No graphics API can draw with the CPU on this computer.\n");
     REQUIRE(countOf(graphicsSystem.record.steps, "open window") ==
             countOf(graphicsSystem.record.steps, "close window"));
     REQUIRE(countOf(graphicsSystem.record.steps, "start renderer") == 0);
@@ -187,7 +188,7 @@ TEST_CASE("The --help option prints the usage, opens no window and exits with 0"
 TEST_CASE("The --help option wins over a wrong option and over --version", "[options][help]") {
     for (const auto args : {std::initializer_list<std::string_view>{"--bogus", "--help"},
                             std::initializer_list<std::string_view>{"--version", "--help"},
-                            std::initializer_list<std::string_view>{"--renderer", "--help"}}) {
+                            std::initializer_list<std::string_view>{"--graphics-api", "--help"}}) {
         FakeGraphicsSystem graphicsSystem;
         const LauncherRun run{graphicsSystem, args};
         REQUIRE(run.out() == usageHere);
@@ -224,9 +225,9 @@ TEST_CASE("The --version option prints exactly the version line, opens no window
 TEST_CASE("The --version option wins over wrong and repeated options", "[options][version]") {
     for (const auto args :
          {std::initializer_list<std::string_view>{"--version", "--bogus"},
-          std::initializer_list<std::string_view>{"--renderer", "foo", "--version"},
+          std::initializer_list<std::string_view>{"--graphics-api", "foo", "--version"},
           std::initializer_list<std::string_view>{"--version", "--version"},
-          std::initializer_list<std::string_view>{"--renderer", "--version"}}) {
+          std::initializer_list<std::string_view>{"--graphics-api", "--version"}}) {
         FakeGraphicsSystem graphicsSystem;
         const LauncherRun run{graphicsSystem, args};
         REQUIRE(run.out() == versionLine());
@@ -236,12 +237,12 @@ TEST_CASE("The --version option wins over wrong and repeated options", "[options
     }
 }
 
-TEST_CASE("The --renderer option starts only the chosen graphics API, after the start line",
-          "[options][renderer]") {
+TEST_CASE("The --graphics-api option starts only the chosen graphics API, after the start line",
+          "[options][graphics-api]") {
     for (const auto& [name, graphicsApi] :
          {std::pair{"vulkan", GraphicsApi::Vulkan}, std::pair{"opengl", GraphicsApi::OpenGL}}) {
         FakeGraphicsSystem graphicsSystem;
-        const LauncherRun run{graphicsSystem, {"--renderer", name}};
+        const LauncherRun run{graphicsSystem, {"--graphics-api", name}};
         REQUIRE(run.out() == versionLine());
         REQUIRE(graphicsSystem.record.requestedGraphicsApi == graphicsApi);
         REQUIRE(graphicsSystem.record.steps.front() == "open window");
@@ -250,47 +251,55 @@ TEST_CASE("The --renderer option starts only the chosen graphics API, after the 
 }
 
 TEST_CASE("With no options the game lets the engine choose the graphics API",
-          "[options][renderer]") {
+          "[options][graphics-api]") {
     FakeGraphicsSystem graphicsSystem;
     const LauncherRun run{graphicsSystem, {}};
     REQUIRE_FALSE(graphicsSystem.record.requestedGraphicsApi.has_value());
     REQUIRE(run.exitCode() == 0);
 }
 
-TEST_CASE("A graphics API that is not available on this computer", "[options][renderer]") {
+TEST_CASE("A graphics API that is not available on this computer", "[options][graphics-api]") {
     FakeGraphicsSystem graphicsSystem;
-    requireOptionError(graphicsSystem, {"--renderer", "metal"},
-                       "Renderer 'metal' is not available on this computer. Available: vulkan, "
+    requireOptionError(graphicsSystem, {"--graphics-api", "metal"},
+                       "Graphics API 'metal' is not available on this computer. Available: vulkan, "
                        "opengl");
 }
 
-TEST_CASE("A graphics API name Wolfen does not know", "[options][renderer]") {
+TEST_CASE("A graphics API name Wolfen does not know", "[options][graphics-api]") {
     for (const auto name : {std::string_view{"foo"}, std::string_view{"Vulkan"}}) {
         FakeGraphicsSystem graphicsSystem;
-        requireOptionError(graphicsSystem, {"--renderer", name},
-                           "Unknown renderer '" + std::string{name} +
+        requireOptionError(graphicsSystem, {"--graphics-api", name},
+                           "Unknown graphics API '" + std::string{name} +
                                "'. Available: vulkan, opengl");
     }
 }
 
-TEST_CASE("The --renderer option with no name", "[options][renderer]") {
+TEST_CASE("The --graphics-api option with no name", "[options][graphics-api]") {
     FakeGraphicsSystem alone;
-    requireOptionError(alone, {"--renderer"}, "Option '--renderer' needs a renderer name");
+    requireOptionError(alone, {"--graphics-api"},
+                       "Option '--graphics-api' needs a graphics API name");
     // A word starting with '-' is never a name: the first error is the missing name.
     FakeGraphicsSystem followed;
-    requireOptionError(followed, {"--renderer", "--bogus"},
-                       "Option '--renderer' needs a renderer name");
+    requireOptionError(followed, {"--graphics-api", "--bogus"},
+                       "Option '--graphics-api' needs a graphics API name");
 }
 
-TEST_CASE("The --renderer option given twice", "[options][renderer]") {
+TEST_CASE("The --graphics-api option given twice", "[options][graphics-api]") {
     FakeGraphicsSystem graphicsSystem;
-    requireOptionError(graphicsSystem, {"--renderer", "opengl", "--renderer", "vulkan"},
-                       "Option '--renderer' given twice");
+    requireOptionError(graphicsSystem, {"--graphics-api", "opengl", "--graphics-api", "vulkan"},
+                       "Option '--graphics-api' given twice");
+}
+
+TEST_CASE("The old --renderer option is unknown", "[options][graphics-api]") {
+    FakeGraphicsSystem withName;
+    requireOptionError(withName, {"--renderer", "vulkan"}, "Unknown option '--renderer'");
+    FakeGraphicsSystem alone;
+    requireOptionError(alone, {"--renderer"}, "Unknown option '--renderer'");
 }
 
 TEST_CASE("Unknown options, including the --option=value form", "[options]") {
     for (const auto word : {std::string_view{"--bogus"}, std::string_view{"foo"},
-                            std::string_view{"--renderer=vulkan"}}) {
+                            std::string_view{"--graphics-api=vulkan"}}) {
         FakeGraphicsSystem graphicsSystem;
         requireOptionError(graphicsSystem, {word}, "Unknown option '" + std::string{word} + "'");
     }
@@ -298,17 +307,17 @@ TEST_CASE("Unknown options, including the --option=value form", "[options]") {
 
 TEST_CASE("Only the first error, reading left to right, is printed", "[options]") {
     FakeGraphicsSystem graphicsSystem;
-    requireOptionError(graphicsSystem, {"--bogus", "--renderer", "foo"},
+    requireOptionError(graphicsSystem, {"--bogus", "--graphics-api", "foo"},
                        "Unknown option '--bogus'");
 }
 
 TEST_CASE("A chosen graphics API that fails to start: its own message, exit 1, window closed",
-          "[options][renderer][startup]") {
+          "[options][graphics-api][startup]") {
     FakeGraphicsSystem graphicsSystem;
     graphicsSystem.rendererFailure = "the device could not be created";
-    const LauncherRun run{graphicsSystem, {"--renderer", "vulkan"}};
+    const LauncherRun run{graphicsSystem, {"--graphics-api", "vulkan"}};
     REQUIRE(run.out() == versionLine()); // the start line comes before the failure
-    REQUIRE(run.err() == "Renderer 'vulkan' could not be started on this computer.\n");
+    REQUIRE(run.err() == "Graphics API 'vulkan' could not be started on this computer.\n");
     REQUIRE(graphicsSystem.record.steps ==
             std::vector<std::string>{"open window", "start renderer", "close window"});
     REQUIRE(run.exitCode() == 1);
@@ -334,7 +343,7 @@ TEST_CASE("Words as the system gives them: 'wolfen --version' prints the version
 
 TEST_CASE(
     "Words as the system gives them: 'wolfen' alone plays with no graphics API choice, exit 0",
-    "[options][renderer][main]") {
+    "[options][graphics-api][main]") {
     FakeGraphicsSystem graphicsSystem;
     const LauncherRun run{graphicsSystem, LauncherRun::ProgramNameFirst{}, {"wolfen"}};
     REQUIRE(run.out() == versionLine());
@@ -343,7 +352,7 @@ TEST_CASE(
     REQUIRE(run.exitCode() == 0);
 }
 
-TEST_CASE("The usage lists --fullscreen right after --renderer, and mentions no keys",
+TEST_CASE("The usage lists --fullscreen right after --graphics-api, and mentions no keys",
           "[options][help][fullscreen]") {
     FakeGraphicsSystem graphicsSystem;
     const std::string usageText = LauncherRun{graphicsSystem, {"--help"}}.out();
@@ -352,16 +361,16 @@ TEST_CASE("The usage lists --fullscreen right after --renderer, and mentions no 
     REQUIRE(usageText.find("Esc") == std::string::npos);
 }
 
-TEST_CASE("The --fullscreen option starts the game fullscreen, in any order with --renderer",
+TEST_CASE("The --fullscreen option starts the game fullscreen, in any order with --graphics-api",
           "[options][fullscreen]") {
     requireFullscreenStart({"--fullscreen"}, std::nullopt);
-    requireFullscreenStart({"--fullscreen", "--renderer", "opengl"}, GraphicsApi::OpenGL);
-    requireFullscreenStart({"--renderer", "opengl", "--fullscreen"}, GraphicsApi::OpenGL);
+    requireFullscreenStart({"--fullscreen", "--graphics-api", "opengl"}, GraphicsApi::OpenGL);
+    requireFullscreenStart({"--graphics-api", "opengl", "--fullscreen"}, GraphicsApi::OpenGL);
 }
 
 TEST_CASE("Without --fullscreen the game starts in a window", "[options][fullscreen]") {
     for (const auto args : {std::initializer_list<std::string_view>{},
-                            std::initializer_list<std::string_view>{"--renderer", "vulkan"}}) {
+                            std::initializer_list<std::string_view>{"--graphics-api", "vulkan"}}) {
         FakeGraphicsSystem graphicsSystem;
         const LauncherRun run{graphicsSystem, args};
         REQUIRE(graphicsSystem.record.windowSettings.windowMode == WindowMode::Windowed);
@@ -441,7 +450,7 @@ TEST_CASE("With --help, --version or a wrong option, no window opens and the set
           "[settings][options]") {
     requireSettingsLeftAlone({"--help"});
     requireSettingsLeftAlone({"--version"});
-    requireSettingsLeftAlone({"--renderer", "nope"});
+    requireSettingsLeftAlone({"--graphics-api", "nope"});
     requireSettingsLeftAlone({"--bogus"});
 }
 
@@ -451,7 +460,7 @@ TEST_CASE("A start that fails never writes the settings file", "[settings][start
     FakeGraphicsSystem rendererFails;
     rendererFails.screen.name = "DP-1";
     rendererFails.rendererFailure = "the device could not be created";
-    const LauncherRun chosenRun{rendererFails, folder.path(), {"--renderer", "vulkan"}};
+    const LauncherRun chosenRun{rendererFails, folder.path(), {"--graphics-api", "vulkan"}};
     REQUIRE(chosenRun.exitCode() == 1);
     const LauncherRun bestRun{rendererFails, folder.path(), {}};
     REQUIRE(bestRun.exitCode() == 1);
@@ -551,13 +560,13 @@ TEST_CASE(
     REQUIRE(windows.record.titles == std::vector<std::string>{titleWith("Direct3D 11, software")});
 }
 
-TEST_CASE("With --software, --renderer is ignored completely", "[software][renderer]") {
-    requireSoftwareStart({"--renderer", "opengl", "--software"});
-    requireSoftwareStart({"--software", "--renderer", "opengl"});
-    requireSoftwareStart({"--renderer", "foo", "--software"});
-    requireSoftwareStart({"--renderer", "--software"});
-    requireSoftwareStart({"--software", "--renderer"});
-    requireSoftwareStart({"--renderer", "vulkan", "--renderer", "opengl", "--software"});
+TEST_CASE("With --software, --graphics-api is ignored completely", "[software][graphics-api]") {
+    requireSoftwareStart({"--graphics-api", "opengl", "--software"});
+    requireSoftwareStart({"--software", "--graphics-api", "opengl"});
+    requireSoftwareStart({"--graphics-api", "foo", "--software"});
+    requireSoftwareStart({"--graphics-api", "--software"});
+    requireSoftwareStart({"--software", "--graphics-api"});
+    requireSoftwareStart({"--graphics-api", "vulkan", "--graphics-api", "opengl", "--software"});
 }
 
 TEST_CASE("The --software option combines with --fullscreen in any order",
@@ -597,16 +606,16 @@ TEST_CASE(
     REQUIRE(versionRun.exitCode() == 0);
 }
 
-TEST_CASE("When no renderer can draw with the CPU: one message, no window left open, exit 1",
+TEST_CASE("When no graphics API can draw with the CPU: one message, no window left open, exit 1",
           "[software]") {
-    FakeGraphicsSystem noneAvailable; // as on macOS: no renderer that can draw with the CPU
+    FakeGraphicsSystem noneAvailable; // as on macOS: no graphics API that can draw with the CPU
     noneAvailable.available = {GraphicsApi::OpenGL, GraphicsApi::Metal};
-    requireNoCpuRenderer(noneAvailable);
+    requireNoCpuGraphicsApi(noneAvailable);
     REQUIRE(noneAvailable.record.triedCpuGraphicsApis.empty());
 
     FakeGraphicsSystem noneStarts; // as on Linux without a CPU Vulkan driver
     noneStarts.available = {GraphicsApi::Vulkan, GraphicsApi::OpenGL};
-    requireNoCpuRenderer(noneStarts);
+    requireNoCpuGraphicsApi(noneStarts);
     REQUIRE(noneStarts.record.triedCpuGraphicsApis ==
             std::vector<GraphicsApi>{GraphicsApi::Vulkan});
 }

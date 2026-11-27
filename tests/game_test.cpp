@@ -109,10 +109,10 @@ TEST_CASE("A renderer that cannot start: message on stderr, the game could not s
           "closed",
           "[game][startup]") {
     FakeGraphicsSystem graphicsSystem;
-    graphicsSystem.rendererFailure = "no renderer could start";
+    graphicsSystem.rendererFailure = "no graphics API could start";
     const GameRun run{graphicsSystem};
     REQUIRE(run.outcome() == Game::Outcome::CouldNotStart);
-    REQUIRE(run.err() == "Wolfen could not start: no renderer could start\n");
+    REQUIRE(run.err() == "Wolfen could not start: no graphics API could start\n");
     REQUIRE(graphicsSystem.record.steps ==
             std::vector<std::string>{"open window", "start renderer", "close window"});
     REQUIRE(graphicsSystem.record.frameColours.empty());
