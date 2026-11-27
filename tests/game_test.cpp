@@ -26,94 +26,95 @@ using wolfen::tests::GameRun;
 using wolfen::tests::versionLine;
 
 TEST_CASE("The start line is printed before the window opens", "[game]") {
-    FakeGraphicsSystem graphics;
-    const GameRun run{graphics};
-    REQUIRE(graphics.record.outputWhenWindowOpened == versionLine());
+    FakeGraphicsSystem graphicsSystem;
+    const GameRun run{graphicsSystem};
+    REQUIRE(graphicsSystem.record.outputWhenWindowOpened == versionLine());
     REQUIRE(run.out() == versionLine());
 }
 
 TEST_CASE("The window opens 1280x720, resizable, titled with the version", "[game]") {
-    FakeGraphicsSystem graphics;
-    const GameRun run{graphics};
-    REQUIRE_FALSE(graphics.record.steps.empty());
-    REQUIRE(graphics.record.steps.front() == "open window");
-    const auto& settings = graphics.record.windowSettings;
+    FakeGraphicsSystem graphicsSystem;
+    const GameRun run{graphicsSystem};
+    REQUIRE_FALSE(graphicsSystem.record.steps.empty());
+    REQUIRE(graphicsSystem.record.steps.front() == "open window");
+    const auto& settings = graphicsSystem.record.windowSettings;
     REQUIRE(settings.size == Size{.width = 1280, .height = 720});
     REQUIRE(settings.resizable);
     REQUIRE(settings.title == "Wolfen " + std::string{Version::current().text()});
 }
 
 TEST_CASE("The title shows the version and the renderer in use", "[game]") {
-    FakeGraphicsSystem graphics;
-    graphics.rendererName = "Vulkan";
-    const GameRun run{graphics};
-    REQUIRE_FALSE(graphics.record.titles.empty());
-    REQUIRE(graphics.record.titles.back() ==
+    FakeGraphicsSystem graphicsSystem;
+    graphicsSystem.rendererName = "Vulkan";
+    const GameRun run{graphicsSystem};
+    REQUIRE_FALSE(graphicsSystem.record.titles.empty());
+    REQUIRE(graphicsSystem.record.titles.back() ==
             "Wolfen " + std::string{Version::current().text()} + " (Vulkan)");
 }
 
 TEST_CASE("Every frame fills the window with cornflower blue", "[game]") {
-    FakeGraphicsSystem graphics;
-    graphics.events = {{}, {}, {}, {Window::Event::CloseRequested}};
-    const GameRun run{graphics};
+    FakeGraphicsSystem graphicsSystem;
+    graphicsSystem.events = {{}, {}, {}, {Window::Event::CloseRequested}};
+    const GameRun run{graphicsSystem};
     const Colour cornflowerBlue{.red = 0x64, .green = 0x95, .blue = 0xED, .alpha = 0xFF};
-    REQUIRE(graphics.record.frames == std::vector<Colour>(3, cornflowerBlue));
+    REQUIRE(graphicsSystem.record.frames == std::vector<Colour>(3, cornflowerBlue));
 }
 
 TEST_CASE("The close button ends the game", "[game]") {
-    FakeGraphicsSystem graphics;
-    graphics.events = {{}, {Window::Event::CloseRequested}, {}};
-    const GameRun run{graphics};
+    FakeGraphicsSystem graphicsSystem;
+    graphicsSystem.events = {{}, {Window::Event::CloseRequested}, {}};
+    const GameRun run{graphicsSystem};
     REQUIRE(run.outcome() == Game::Outcome::Ended);
-    REQUIRE(graphics.record.frames.size() == 1);
+    REQUIRE(graphicsSystem.record.frames.size() == 1);
     REQUIRE(run.err().empty());
 }
 
 TEST_CASE("Esc ends the game", "[game]") {
-    FakeGraphicsSystem graphics;
-    graphics.events = {{}, {Window::Event::EscapePressed}, {}};
-    const GameRun run{graphics};
+    FakeGraphicsSystem graphicsSystem;
+    graphicsSystem.events = {{}, {Window::Event::EscapePressed}, {}};
+    const GameRun run{graphicsSystem};
     REQUIRE(run.outcome() == Game::Outcome::Ended);
-    REQUIRE(graphics.record.frames.size() == 1);
+    REQUIRE(graphicsSystem.record.frames.size() == 1);
 }
 
 TEST_CASE("Resizing the window gives the renderer the new size in pixels", "[game]") {
-    FakeGraphicsSystem graphics;
-    graphics.pixelSize = Size{.width = 1280, .height = 720};
-    graphics.sizeAfterResize = Size{.width = 1600, .height = 900};
-    graphics.events = {{}, {Window::Event::Resized}, {}};
-    const GameRun run{graphics};
-    REQUIRE(graphics.record.resizes == std::vector<Size>{Size{.width = 1600, .height = 900}});
+    FakeGraphicsSystem graphicsSystem;
+    graphicsSystem.pixelSize = Size{.width = 1280, .height = 720};
+    graphicsSystem.sizeAfterResize = Size{.width = 1600, .height = 900};
+    graphicsSystem.events = {{}, {Window::Event::Resized}, {}};
+    const GameRun run{graphicsSystem};
+    REQUIRE(graphicsSystem.record.resizes == std::vector<Size>{Size{.width = 1600, .height = 900}});
 }
 
 TEST_CASE("When the game ends, the renderer closes before the window", "[game]") {
-    FakeGraphicsSystem graphics;
-    const GameRun run{graphics};
-    REQUIRE(graphics.record.steps == std::vector<std::string>{"open window", "start renderer",
-                                                              "close renderer", "close window"});
+    FakeGraphicsSystem graphicsSystem;
+    const GameRun run{graphicsSystem};
+    REQUIRE(graphicsSystem.record.steps == std::vector<std::string>{"open window", "start renderer",
+                                                                    "close renderer",
+                                                                    "close window"});
 }
 
 TEST_CASE("A window that cannot open: message on stderr, the game could not start",
           "[game][startup]") {
-    FakeGraphicsSystem graphics;
-    graphics.windowFailure = "no display available";
-    const GameRun run{graphics};
+    FakeGraphicsSystem graphicsSystem;
+    graphicsSystem.windowFailure = "no display available";
+    const GameRun run{graphicsSystem};
     REQUIRE(run.outcome() == Game::Outcome::CouldNotStart);
     REQUIRE(run.err() == "Wolfen could not start: no display available\n");
-    REQUIRE(graphics.record.steps == std::vector<std::string>{"open window"});
+    REQUIRE(graphicsSystem.record.steps == std::vector<std::string>{"open window"});
 }
 
 TEST_CASE("A renderer that cannot start: message on stderr, the game could not start, window "
           "closed",
           "[game][startup]") {
-    FakeGraphicsSystem graphics;
-    graphics.rendererFailure = "no renderer could start";
-    const GameRun run{graphics};
+    FakeGraphicsSystem graphicsSystem;
+    graphicsSystem.rendererFailure = "no renderer could start";
+    const GameRun run{graphicsSystem};
     REQUIRE(run.outcome() == Game::Outcome::CouldNotStart);
     REQUIRE(run.err() == "Wolfen could not start: no renderer could start\n");
-    REQUIRE(graphics.record.steps ==
+    REQUIRE(graphicsSystem.record.steps ==
             std::vector<std::string>{"open window", "start renderer", "close window"});
-    REQUIRE(graphics.record.frames.empty());
+    REQUIRE(graphicsSystem.record.frames.empty());
 }
 
 TEST_CASE("Renderer display names", "[renderer]") {
@@ -129,108 +130,108 @@ TEST_CASE("Any other renderer shows the rendering library's own name", "[rendere
 }
 
 TEST_CASE("A hidden window is not drawn; the game sleeps until it is shown again", "[game]") {
-    FakeGraphicsSystem graphics;
-    graphics.events = {{}, {Window::Event::Hidden}, {}, {}, {Window::Event::Shown}, {}, {}};
-    const GameRun run{graphics};
+    FakeGraphicsSystem graphicsSystem;
+    graphicsSystem.events = {{}, {Window::Event::Hidden}, {}, {}, {Window::Event::Shown}, {}, {}};
+    const GameRun run{graphicsSystem};
     // Drawn after the 1st batch; not after Hidden (2nd) nor the batches waited for while hidden
     // (3rd, 4th); again after Shown (5th), the 6th and the 7th. The 8th poll finds none left and
     // closes.
-    REQUIRE(graphics.record.frames.size() == 4);
+    REQUIRE(graphicsSystem.record.frames.size() == 4);
     // The batches after Hidden (3rd, 4th, 5th) are waited for, not polled.
-    REQUIRE(graphics.record.waits == 3);
+    REQUIRE(graphicsSystem.record.waits == 3);
     REQUIRE(run.outcome() == Game::Outcome::Ended);
 }
 
 TEST_CASE("A hidden window can still be closed", "[game]") {
-    FakeGraphicsSystem graphics;
-    graphics.events = {{Window::Event::Hidden}, {Window::Event::CloseRequested}};
-    const GameRun run{graphics};
-    REQUIRE(graphics.record.frames.empty());
-    REQUIRE(graphics.record.waits == 1);
+    FakeGraphicsSystem graphicsSystem;
+    graphicsSystem.events = {{Window::Event::Hidden}, {Window::Event::CloseRequested}};
+    const GameRun run{graphicsSystem};
+    REQUIRE(graphicsSystem.record.frames.empty());
+    REQUIRE(graphicsSystem.record.waits == 1);
     REQUIRE(run.outcome() == Game::Outcome::Ended);
 }
 
 TEST_CASE("The game starts the renderer it is given, after the start line", "[game][renderer]") {
     for (const auto graphicsApi : {GraphicsApi::Vulkan, GraphicsApi::OpenGL}) {
-        FakeGraphicsSystem graphics;
-        const GameRun run{graphics, graphicsApi};
-        REQUIRE(graphics.record.outputWhenWindowOpened == versionLine());
-        REQUIRE(graphics.record.requestedGraphicsApi == graphicsApi);
+        FakeGraphicsSystem graphicsSystem;
+        const GameRun run{graphicsSystem, graphicsApi};
+        REQUIRE(graphicsSystem.record.outputWhenWindowOpened == versionLine());
+        REQUIRE(graphicsSystem.record.requestedGraphicsApi == graphicsApi);
         REQUIRE(run.outcome() == Game::Outcome::Ended);
     }
 }
 
 TEST_CASE("Given no renderer, the game lets the engine choose", "[game][renderer]") {
-    FakeGraphicsSystem graphics;
-    const GameRun run{graphics, std::nullopt};
-    REQUIRE(graphics.record.steps.size() >= 2);
-    REQUIRE(graphics.record.steps.at(1) == "start renderer");
-    REQUIRE_FALSE(graphics.record.requestedGraphicsApi.has_value());
+    FakeGraphicsSystem graphicsSystem;
+    const GameRun run{graphicsSystem, std::nullopt};
+    REQUIRE(graphicsSystem.record.steps.size() >= 2);
+    REQUIRE(graphicsSystem.record.steps.at(1) == "start renderer");
+    REQUIRE_FALSE(graphicsSystem.record.requestedGraphicsApi.has_value());
     REQUIRE(run.outcome() == Game::Outcome::Ended);
 }
 
 TEST_CASE("A given renderer that fails to start: reported, nothing printed, window closed",
           "[game][renderer][startup]") {
-    FakeGraphicsSystem graphics;
-    graphics.rendererFailure = "the device could not be created";
-    const GameRun run{graphics, GraphicsApi::Vulkan};
+    FakeGraphicsSystem graphicsSystem;
+    graphicsSystem.rendererFailure = "the device could not be created";
+    const GameRun run{graphicsSystem, GraphicsApi::Vulkan};
     REQUIRE(run.outcome() == Game::Outcome::ChosenGraphicsApiFailed);
     REQUIRE(run.out() == versionLine()); // the start line comes before the failure
     REQUIRE(run.err().empty());
-    REQUIRE(graphics.record.steps ==
+    REQUIRE(graphicsSystem.record.steps ==
             std::vector<std::string>{"open window", "start renderer", "close window"});
 }
 
 TEST_CASE("Given no window mode, the game opens a window, not fullscreen", "[game][fullscreen]") {
-    FakeGraphicsSystem graphics;
-    const GameRun run{graphics};
-    REQUIRE(graphics.record.windowSettings.mode == WindowMode::Windowed);
+    FakeGraphicsSystem graphicsSystem;
+    const GameRun run{graphicsSystem};
+    REQUIRE(graphicsSystem.record.windowSettings.mode == WindowMode::Windowed);
 }
 
 TEST_CASE("Asked for fullscreen, the game opens its window fullscreen, 1280x720 for later",
           "[game][fullscreen]") {
     for (const auto graphicsApi :
          {std::optional<GraphicsApi>{}, std::optional<GraphicsApi>{GraphicsApi::OpenGL}}) {
-        FakeGraphicsSystem graphics;
-        const GameRun run{graphics, graphicsApi, WindowMode::Fullscreen};
-        const auto& settings = graphics.record.windowSettings;
+        FakeGraphicsSystem graphicsSystem;
+        const GameRun run{graphicsSystem, graphicsApi, WindowMode::Fullscreen};
+        const auto& settings = graphicsSystem.record.windowSettings;
         REQUIRE(settings.mode == WindowMode::Fullscreen);
         // The size the window gets when it first leaves fullscreen.
         REQUIRE(settings.size == Size{.width = 1280, .height = 720});
-        REQUIRE(graphics.record.requestedGraphicsApi == graphicsApi);
+        REQUIRE(graphicsSystem.record.requestedGraphicsApi == graphicsApi);
         REQUIRE(run.outcome() == Game::Outcome::Ended);
     }
 }
 
 TEST_CASE("Each F11 press switches fullscreen once, and the game keeps drawing",
           "[game][fullscreen]") {
-    FakeGraphicsSystem graphics;
-    graphics.events = {
+    FakeGraphicsSystem graphicsSystem;
+    graphicsSystem.events = {
         {Window::Event::FullscreenKeyPressed}, {}, {Window::Event::FullscreenKeyPressed}, {}};
-    const GameRun run{graphics};
-    REQUIRE(graphics.record.fullscreenSwitches == 2);
-    REQUIRE(graphics.record.frames.size() == 4);
+    const GameRun run{graphicsSystem};
+    REQUIRE(graphicsSystem.record.fullscreenSwitches == 2);
+    REQUIRE(graphicsSystem.record.frames.size() == 4);
     REQUIRE(run.outcome() == Game::Outcome::Ended);
 }
 
 TEST_CASE("Switching fullscreen keeps the title with the renderer's name", "[game][fullscreen]") {
-    FakeGraphicsSystem graphics;
-    graphics.rendererName = "OpenGL";
-    graphics.events = {{Window::Event::FullscreenKeyPressed}, {}};
-    const GameRun run{graphics, GraphicsApi::OpenGL, WindowMode::Fullscreen};
-    REQUIRE(graphics.record.fullscreenSwitches == 1);
+    FakeGraphicsSystem graphicsSystem;
+    graphicsSystem.rendererName = "OpenGL";
+    graphicsSystem.events = {{Window::Event::FullscreenKeyPressed}, {}};
+    const GameRun run{graphicsSystem, GraphicsApi::OpenGL, WindowMode::Fullscreen};
+    REQUIRE(graphicsSystem.record.fullscreenSwitches == 1);
     REQUIRE(
-        graphics.record.titles ==
+        graphicsSystem.record.titles ==
         std::vector<std::string>{"Wolfen " + std::string{Version::current().text()} + " (OpenGL)"});
 }
 
 TEST_CASE("In fullscreen, Esc and the close button still end the game", "[game][fullscreen]") {
     for (const auto quit : {Window::Event::EscapePressed, Window::Event::CloseRequested}) {
-        FakeGraphicsSystem graphics;
-        graphics.events = {{}, {quit}, {}};
-        const GameRun run{graphics, std::nullopt, WindowMode::Fullscreen};
-        REQUIRE(graphics.record.windowSettings.mode == WindowMode::Fullscreen);
-        REQUIRE(graphics.record.frames.size() == 1);
+        FakeGraphicsSystem graphicsSystem;
+        graphicsSystem.events = {{}, {quit}, {}};
+        const GameRun run{graphicsSystem, std::nullopt, WindowMode::Fullscreen};
+        REQUIRE(graphicsSystem.record.windowSettings.mode == WindowMode::Fullscreen);
+        REQUIRE(graphicsSystem.record.frames.size() == 1);
         REQUIRE(run.outcome() == Game::Outcome::Ended);
     }
 }

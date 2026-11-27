@@ -54,12 +54,14 @@ class RunOutput {
 // when it opened the window.
 class GameRun final : public RunOutput {
   public:
-    explicit GameRun(FakeGraphicsSystem& graphics) : outcome_{watchedGame(graphics).run()} {}
+    explicit GameRun(FakeGraphicsSystem& graphicsSystem)
+        : outcome_{watchedGame(graphicsSystem).run()} {}
     // Runs it with the given graphics API choice, already checked by the launcher, in the given
     // window mode.
-    GameRun(FakeGraphicsSystem& graphics, std::optional<engine::render::GraphicsApi> graphicsApi,
+    GameRun(FakeGraphicsSystem& graphicsSystem,
+            std::optional<engine::render::GraphicsApi> graphicsApi,
             engine::platform::WindowMode windowMode = engine::platform::WindowMode::Windowed)
-        : outcome_{watchedGame(graphics).run(graphicsApi, windowMode, {})} {}
+        : outcome_{watchedGame(graphicsSystem).run(graphicsApi, windowMode, {})} {}
 
     [[nodiscard]] game::Game::Outcome outcome() const {
         return outcome_;
@@ -68,9 +70,9 @@ class GameRun final : public RunOutput {
   private:
     // A game printing to this run's streams; the graphics system records what it had printed
     // when the window opened.
-    game::Game watchedGame(FakeGraphicsSystem& graphics) {
-        graphics.watchedOutput = &outStream();
-        return game::Game{outStream(), errStream(), graphics};
+    game::Game watchedGame(FakeGraphicsSystem& graphicsSystem) {
+        graphicsSystem.watchedOutput = &outStream();
+        return game::Game{outStream(), errStream(), graphicsSystem};
     }
 
     game::Game::Outcome outcome_;
@@ -84,18 +86,19 @@ class LauncherRun final : public RunOutput {
     struct ProgramNameFirst {};
 
     // args: the words after the program's name.
-    LauncherRun(FakeGraphicsSystem& graphics, std::initializer_list<std::string_view> args)
-        : exitCode_{launcher(graphics, ownFolder_.emplace().path())
+    LauncherRun(FakeGraphicsSystem& graphicsSystem, std::initializer_list<std::string_view> args)
+        : exitCode_{launcher(graphicsSystem, ownFolder_.emplace().path())
                         .run(std::vector<std::string_view>{args})} {}
 
     // gameFolder: where the settings file is kept; nullopt when the system cannot say.
-    LauncherRun(FakeGraphicsSystem& graphics,
+    LauncherRun(FakeGraphicsSystem& graphicsSystem,
                 const std::optional<std::filesystem::path>& gameFolder,
                 std::initializer_list<std::string_view> args)
-        : exitCode_{launcher(graphics, gameFolder).run(std::vector<std::string_view>{args})} {}
+        : exitCode_{launcher(graphicsSystem, gameFolder).run(std::vector<std::string_view>{args})} {
+    }
 
     // words: the program's name and the words after it, for example {"wolfen", "--version"}.
-    LauncherRun(FakeGraphicsSystem& graphics, ProgramNameFirst /*tag*/,
+    LauncherRun(FakeGraphicsSystem& graphicsSystem, ProgramNameFirst /*tag*/,
                 std::initializer_list<std::string_view> words) {
         // main() receives non-const char* words, so the words are copied into strings this
         // constructor owns. The list points to them: argc pointers, then a null one.
@@ -107,7 +110,7 @@ class LauncherRun final : public RunOutput {
         }
         argv.push_back(nullptr);
         const int argc = static_cast<int>(copies.size());
-        exitCode_ = launcher(graphics, ownFolder_.emplace().path()).run(argc, argv.data());
+        exitCode_ = launcher(graphicsSystem, ownFolder_.emplace().path()).run(argc, argv.data());
     }
 
     [[nodiscard]] int exitCode() const {
@@ -116,9 +119,9 @@ class LauncherRun final : public RunOutput {
 
   private:
     // A launcher printing to this run's streams.
-    game::Launcher launcher(FakeGraphicsSystem& graphics,
+    game::Launcher launcher(FakeGraphicsSystem& graphicsSystem,
                             const std::optional<std::filesystem::path>& gameFolder) {
-        return game::Launcher{outStream(), errStream(), graphics, gameFolder};
+        return game::Launcher{outStream(), errStream(), graphicsSystem, gameFolder};
     }
 
     // The game's folder, made only for a run that is not given one. Declared first, so it can be
