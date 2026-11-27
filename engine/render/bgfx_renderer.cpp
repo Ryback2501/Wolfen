@@ -20,8 +20,8 @@ constexpr bgfx::ViewId mainView = 0;
 constexpr std::uint32_t resetFlags = BGFX_RESET_VSYNC; // one frame per screen refresh
 
 // The graphics API for a bgfx renderer type; GraphicsApi::Other for a type Wolfen does not name.
-GraphicsApi graphicsApiOf(bgfx::RendererType::Enum type) {
-    const GraphicsApiTable::Row* row = GraphicsApiTable::row(type);
+GraphicsApi graphicsApiOf(bgfx::RendererType::Enum rendererType) {
+    const GraphicsApiTable::Row* row = GraphicsApiTable::row(rendererType);
     return row == nullptr ? GraphicsApi::Other : row->graphicsApi;
 }
 
@@ -55,25 +55,26 @@ constexpr std::uint16_t warpDeviceId = 0x008C;
 //   device id, and no graphics card with both its vendor and device ids.
 // WARP that bgfx falls back to by itself (Direct3D 11 retrying on a graphics card's adapter) is
 // not recognised.
-bool drawsOnCpu(const bgfx::Caps& caps) {
+bool deviceDrawsWithCpu(const bgfx::Caps& caps) {
     if (caps.vendorId == BGFX_PCI_ID_SOFTWARE_RASTERIZER ||
         (caps.vendorId == BGFX_PCI_ID_MICROSOFT && caps.deviceId == warpDeviceId)) {
         return true;
     }
-    const std::span<const bgfx::Caps::GPU> gpus{caps.gpu};
-    const auto listed = gpus.first(std::min<std::size_t>(caps.numGPUs, gpus.size()));
-    const bool isListedAsCpu = std::ranges::any_of(listed, [&caps](const bgfx::Caps::GPU& gpu) {
-        return gpu.vendorId == BGFX_PCI_ID_SOFTWARE_RASTERIZER && gpu.deviceId == caps.deviceId;
-    });
+    const std::span<const bgfx::Caps::GPU> devices{caps.gpu};
+    const auto listedDevices = devices.first(std::min<std::size_t>(caps.numGPUs, devices.size()));
+    const bool isListedAsCpu =
+        std::ranges::any_of(listedDevices, [&caps](const bgfx::Caps::GPU& gpu) {
+            return gpu.vendorId == BGFX_PCI_ID_SOFTWARE_RASTERIZER && gpu.deviceId == caps.deviceId;
+        });
     const bool isListedAsGraphicsCard =
-        std::ranges::any_of(listed, [&caps](const bgfx::Caps::GPU& gpu) {
+        std::ranges::any_of(listedDevices, [&caps](const bgfx::Caps::GPU& gpu) {
             return gpu.vendorId == caps.vendorId && gpu.deviceId == caps.deviceId;
         });
     return isListedAsCpu && !isListedAsGraphicsCard;
 }
 
 // bgfx's 0xRRGGBBAA form of a colour.
-std::uint32_t packed(Colour colour) {
+std::uint32_t packedColour(Colour colour) {
     return (std::uint32_t{colour.red} << 24U) | (std::uint32_t{colour.green} << 16U) |
            (std::uint32_t{colour.blue} << 8U) | std::uint32_t{colour.alpha};
 }
@@ -81,12 +82,12 @@ std::uint32_t packed(Colour colour) {
 } // namespace
 
 std::vector<GraphicsApi> BgfxRenderer::availableGraphicsApis() {
-    std::array<bgfx::RendererType::Enum, bgfx::RendererType::Count> types{};
-    const std::uint8_t count =
-        bgfx::getSupportedRenderers(static_cast<std::uint8_t>(types.size()), types.data());
+    std::array<bgfx::RendererType::Enum, bgfx::RendererType::Count> rendererTypes{};
+    const std::uint8_t typeCount = bgfx::getSupportedRenderers(
+        static_cast<std::uint8_t>(rendererTypes.size()), rendererTypes.data());
     std::vector<GraphicsApi> graphicsApis;
-    for (std::size_t i = 0; i < count; ++i) {
-        const GraphicsApi graphicsApi = graphicsApiOf(types.at(i));
+    for (std::size_t i = 0; i < typeCount; ++i) {
+        const GraphicsApi graphicsApi = graphicsApiOf(rendererTypes.at(i));
 #ifndef _WIN32
         // bgfx also builds Direct3D outside Windows (for layers such as DXVK) and reports it as
         // supported, although it cannot start on a normal Linux desktop.
@@ -145,10 +146,10 @@ BgfxRenderer::BgfxRenderer(const platform::Window& window, std::optional<Graphic
     // From here bgfx is running: if anything below fails, the destructor will not run, so shut
     // bgfx down here before the window it draws into goes away.
     try {
-        const bgfx::RendererType::Enum type = bgfx::getRendererType();
-        displayName_ =
-            GraphicsApiName::displayName(graphicsApiOf(type), bgfx::getRendererName(type));
-        drawsWithCpu_ = drawsOnCpu(*bgfx::getCaps());
+        const bgfx::RendererType::Enum rendererType = bgfx::getRendererType();
+        displayName_ = GraphicsApiName::displayName(graphicsApiOf(rendererType),
+                                                    bgfx::getRendererName(rendererType));
+        drawsWithCpu_ = deviceDrawsWithCpu(*bgfx::getCaps());
         if (device == Device::Cpu && !drawsWithCpu_) {
             // bgfx falls back to a graphics card when it finds no CPU device.
             throw StartupError{"there is no CPU device for this renderer"};
@@ -180,7 +181,7 @@ void BgfxRenderer::resize(Size pixelSize) {
 }
 
 void BgfxRenderer::drawFrame(Colour backgroundColour) {
-    bgfx::setViewClear(mainView, BGFX_CLEAR_COLOR, packed(backgroundColour));
+    bgfx::setViewClear(mainView, BGFX_CLEAR_COLOR, packedColour(backgroundColour));
     bgfx::touch(mainView); // the view is drawn (cleared) even with nothing submitted to it
     bgfx::frame();
 }
