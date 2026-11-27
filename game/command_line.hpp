@@ -18,10 +18,10 @@ class CommandLine {
     // What the game should do with these options.
     enum class Action : std::uint8_t { Run, Help, Version, Error };
 
-    // args: the words after the program's name. available: the graphics APIs this computer
-    // supports.
+    // args: the words after the program's name. availableGraphicsApis: the graphics APIs this
+    // computer supports.
     CommandLine(std::span<const std::string_view> args,
-                std::span<const engine::render::GraphicsApi> available);
+                std::span<const engine::render::GraphicsApi> availableGraphicsApis);
 
     [[nodiscard]] Action action() const;
     // For Run: the graphics API asked for with --renderer, if any; never with --software.
@@ -35,17 +35,18 @@ class CommandLine {
     [[nodiscard]] const std::string& error() const;
 
     // The usage text, listing the graphics APIs available on this computer.
-    [[nodiscard]] static std::string usage(std::span<const engine::render::GraphicsApi> available);
+    [[nodiscard]] static std::string
+    usage(std::span<const engine::render::GraphicsApi> availableGraphicsApis);
     // The one line shown after an option error, pointing to --help.
     [[nodiscard]] static std::string hint();
     // The name of a graphics API as written in --renderer, for example "vulkan".
-    [[nodiscard]] static std::string_view optionName(engine::render::GraphicsApi graphicsApi);
+    [[nodiscard]] static std::string_view graphicsApiName(engine::render::GraphicsApi graphicsApi);
 
   private:
     // Reads the value of --renderer: the graphics API it names, if Wolfen knows it and this
     // computer supports it; otherwise records the error.
-    void readRenderer(std::string_view name,
-                      std::span<const engine::render::GraphicsApi> available);
+    void readGraphicsApi(std::string_view name,
+                         std::span<const engine::render::GraphicsApi> availableGraphicsApis);
     // Records the error to report, unless an earlier one is already recorded.
     void fail(std::string message);
 

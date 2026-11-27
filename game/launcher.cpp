@@ -24,12 +24,12 @@ Launcher::Launcher(std::ostream& out, std::ostream& err, GraphicsSystem& graphic
     : out_{&out}, err_{&err}, graphics_{&graphics}, gameFolder_{std::move(gameFolder)} {}
 
 int Launcher::run(std::span<const std::string_view> args) {
-    const std::vector<GraphicsApi> available = graphics_->availableGraphicsApis();
-    const CommandLine commandLine{args, available};
+    const std::vector<GraphicsApi> availableGraphicsApis = graphics_->availableGraphicsApis();
+    const CommandLine commandLine{args, availableGraphicsApis};
 
     switch (commandLine.action()) {
     case CommandLine::Action::Help:
-        *out_ << CommandLine::usage(available);
+        *out_ << CommandLine::usage(availableGraphicsApis);
         return 0;
     case CommandLine::Action::Version:
         *out_ << Game::name() << '\n';
@@ -58,7 +58,8 @@ int Launcher::run(std::span<const std::string_view> args) {
         saveScreen(settingsFile, game.screenAtQuit());
         return 0;
     case Game::Outcome::ChosenRendererFailed:
-        *err_ << "Renderer '" << CommandLine::optionName(graphicsApi.value_or(GraphicsApi::Other))
+        *err_ << "Renderer '"
+              << CommandLine::graphicsApiName(graphicsApi.value_or(GraphicsApi::Other))
               << "' could not be started on this computer.\n";
         return 1;
     case Game::Outcome::NoCpuRenderer:

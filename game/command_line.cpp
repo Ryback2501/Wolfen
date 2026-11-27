@@ -78,13 +78,15 @@ std::string shownOption(const OptionRow& row) {
                            : std::string{row.name};
 }
 
-struct NamedRenderer {
+// A graphics API and its name in the --renderer option. Players say "renderer" (the option, the
+// help and the messages); the code calls it GraphicsApi.
+struct NamedGraphicsApi {
     std::string_view name;
     GraphicsApi graphicsApi;
 };
 
 // Every graphics API name Wolfen knows, in the fixed order used wherever a list is printed.
-constexpr std::array<NamedRenderer, 5> knownRenderers{
+constexpr std::array<NamedGraphicsApi, 5> knownGraphicsApis{
     {{.name = "vulkan", .graphicsApi = GraphicsApi::Vulkan},
      {.name = "opengl", .graphicsApi = GraphicsApi::OpenGL},
      {.name = "metal", .graphicsApi = GraphicsApi::Metal},
@@ -120,12 +122,12 @@ bool contains(const List& list, const std::ranges::range_value_t<List>& item) {
 }
 
 // The available graphics APIs, by name, in the fixed order: "vulkan, opengl", or "(none)".
-std::string availableList(std::span<const GraphicsApi> available) {
+std::string availableGraphicsApiNames(std::span<const GraphicsApi> availableGraphicsApis) {
     std::string list;
-    for (const auto& named : knownRenderers) {
-        if (contains(available, named.graphicsApi)) {
+    for (const auto& namedGraphicsApi : knownGraphicsApis) {
+        if (contains(availableGraphicsApis, namedGraphicsApi.graphicsApi)) {
             list += list.empty() ? "" : ", ";
-            list += named.name;
+            list += namedGraphicsApi.name;
         }
     }
     return list.empty() ? "(none)" : list;
@@ -136,7 +138,7 @@ std::string availableList(std::span<const GraphicsApi> available) {
 // The software option is read first, because it changes how the renderer option is read wherever
 // that comes. It can never be another option's value, as it starts with '-'.
 CommandLine::CommandLine(std::span<const std::string_view> args,
-                         std::span<const GraphicsApi> available)
+                         std::span<const GraphicsApi> availableGraphicsApis)
     : isSoftwareAsked_{contains(args, softwareRow.name)} {
     // Every word is read, and only the first error, reading left to right, is kept. The help
     // option, then the version option, win over everything else wherever they are.
@@ -182,7 +184,7 @@ CommandLine::CommandLine(std::span<const std::string_view> args,
 
         switch (row->option) {
         case Option::Renderer:
-            readRenderer(value, available);
+            readGraphicsApi(value, availableGraphicsApis);
             break;
         case Option::Fullscreen:
             windowMode_ = WindowMode::Fullscreen;
@@ -205,18 +207,21 @@ CommandLine::CommandLine(std::span<const std::string_view> args,
     }
 }
 
-void CommandLine::readRenderer(std::string_view name, std::span<const GraphicsApi> available) {
-    const NamedRenderer* named = firstRow(
-        knownRenderers, [name](const NamedRenderer& candidate) { return candidate.name == name; });
-    if (named == nullptr || !contains(available, named->graphicsApi)) {
+void CommandLine::readGraphicsApi(std::string_view name,
+                                  std::span<const GraphicsApi> availableGraphicsApis) {
+    const NamedGraphicsApi* namedGraphicsApi =
+        firstRow(knownGraphicsApis,
+                 [name](const NamedGraphicsApi& candidate) { return candidate.name == name; });
+    if (namedGraphicsApi == nullptr ||
+        !contains(availableGraphicsApis, namedGraphicsApi->graphicsApi)) {
         const std::string problem =
-            named == nullptr
+            namedGraphicsApi == nullptr
                 ? "Unknown renderer '" + std::string{name} + "'"
                 : "Renderer '" + std::string{name} + "' is not available on this computer";
-        fail(problem + ". Available: " + availableList(available));
+        fail(problem + ". Available: " + availableGraphicsApiNames(availableGraphicsApis));
         return;
     }
-    graphicsApi_ = named->graphicsApi;
+    graphicsApi_ = namedGraphicsApi->graphicsApi;
 }
 
 void CommandLine::fail(std::string message) {
@@ -245,7 +250,7 @@ const std::string& CommandLine::error() const {
     return error_;
 }
 
-std::string CommandLine::usage(std::span<const GraphicsApi> available) {
+std::string CommandLine::usage(std::span<const GraphicsApi> availableGraphicsApis) {
     // The help lines start two spaces after the longest option as shown.
     std::size_t helpColumn = 0;
     for (const OptionRow& row : options) {
@@ -259,7 +264,7 @@ std::string CommandLine::usage(std::span<const GraphicsApi> available) {
         const std::string shown = shownOption(row);
         text += "  " + shown + std::string(helpColumn - shown.size(), ' ') + std::string{row.help};
         if (row.option == Option::Renderer) {
-            text += " " + availableList(available);
+            text += " " + availableGraphicsApiNames(availableGraphicsApis);
         }
         text += '\n';
     }
@@ -270,12 +275,12 @@ std::string CommandLine::hint() {
     return "Run 'wolfen " + std::string{helpRow.name} + "' to see the available options.";
 }
 
-std::string_view CommandLine::optionName(GraphicsApi graphicsApi) {
-    const NamedRenderer* named =
-        firstRow(knownRenderers, [graphicsApi](const NamedRenderer& candidate) {
+std::string_view CommandLine::graphicsApiName(GraphicsApi graphicsApi) {
+    const NamedGraphicsApi* namedGraphicsApi =
+        firstRow(knownGraphicsApis, [graphicsApi](const NamedGraphicsApi& candidate) {
             return candidate.graphicsApi == graphicsApi;
         });
-    return named == nullptr ? std::string_view{} : named->name;
+    return namedGraphicsApi == nullptr ? std::string_view{} : namedGraphicsApi->name;
 }
 
 } // namespace wolfen::game
