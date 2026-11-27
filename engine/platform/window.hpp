@@ -44,8 +44,8 @@ class Window {
         enum class Kind : std::uint8_t { Windows, Cocoa, X11, Wayland };
 
         Kind kind{};
-        void* window{};  // HWND, NSWindow*, X11 Window id, or wl_surface*
-        void* display{}; // X11 Display* or wl_display*; null elsewhere
+        void* windowHandle{};      // HWND, NSWindow*, X11 Window id, or wl_surface*
+        void* displayConnection{}; // X11 Display* or wl_display*; null elsewhere
     };
 
     Window() = default;

@@ -224,21 +224,21 @@ Window::NativeHandles SdlWindow::nativeHandles() const {
     const SDL_PropertiesID properties = SDL_GetWindowProperties(window_);
 #ifdef _WIN32
     return {.kind = Window::NativeHandles::Kind::Windows,
-            .window =
+            .windowHandle =
                 SDL_GetPointerProperty(properties, SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr),
-            .display = nullptr};
+            .displayConnection = nullptr};
 #elif defined(__APPLE__)
     return {.kind = Window::NativeHandles::Kind::Cocoa,
-            .window =
+            .windowHandle =
                 SDL_GetPointerProperty(properties, SDL_PROP_WINDOW_COCOA_WINDOW_POINTER, nullptr),
-            .display = nullptr};
+            .displayConnection = nullptr};
 #else
     const std::string_view driver{SDL_GetCurrentVideoDriver()};
     if (driver == "wayland") {
         return {.kind = Window::NativeHandles::Kind::Wayland,
-                .window = SDL_GetPointerProperty(properties,
-                                                 SDL_PROP_WINDOW_WAYLAND_SURFACE_POINTER, nullptr),
-                .display = SDL_GetPointerProperty(
+                .windowHandle = SDL_GetPointerProperty(
+                    properties, SDL_PROP_WINDOW_WAYLAND_SURFACE_POINTER, nullptr),
+                .displayConnection = SDL_GetPointerProperty(
                     properties, SDL_PROP_WINDOW_WAYLAND_DISPLAY_POINTER, nullptr)};
     }
     if (driver != "x11") {
@@ -248,8 +248,8 @@ Window::NativeHandles SdlWindow::nativeHandles() const {
     const auto x11Window = static_cast<std::uintptr_t>(
         SDL_GetNumberProperty(properties, SDL_PROP_WINDOW_X11_WINDOW_NUMBER, 0));
     return {.kind = Window::NativeHandles::Kind::X11,
-            .window = std::bit_cast<void*>(x11Window),
-            .display =
+            .windowHandle = std::bit_cast<void*>(x11Window),
+            .displayConnection =
                 SDL_GetPointerProperty(properties, SDL_PROP_WINDOW_X11_DISPLAY_POINTER, nullptr)};
 #endif
 }
