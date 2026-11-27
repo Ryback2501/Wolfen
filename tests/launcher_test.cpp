@@ -129,7 +129,7 @@ void requireSettingsLeftAlone(std::initializer_list<std::string_view> args) {
     const TempFolder noFile;
     FakeGraphicsSystem again;
     const LauncherRun runAgain{again, noFile.path(), args};
-    REQUIRE_FALSE(noFile.has("settings.ini"));
+    REQUIRE_FALSE(noFile.hasFile("settings.ini"));
 }
 
 // The window title with the given renderer text: "Wolfen vX.Y.Z (<renderer>)".
@@ -152,7 +152,8 @@ void requireSoftwareStart(std::initializer_list<std::string_view> args) {
     graphicsSystem.cpuGraphicsApis = {GraphicsApi::Vulkan};
     const LauncherRun run{graphicsSystem, args};
     REQUIRE(run.err().empty());
-    REQUIRE(graphicsSystem.record.cpuTries == std::vector<GraphicsApi>{GraphicsApi::Vulkan});
+    REQUIRE(graphicsSystem.record.triedCpuGraphicsApis ==
+            std::vector<GraphicsApi>{GraphicsApi::Vulkan});
     REQUIRE(countOf(graphicsSystem.record.steps, "start renderer") == 0);
     REQUIRE(graphicsSystem.record.titles ==
             std::vector<std::string>{titleWith("Vulkan, software")});
@@ -370,7 +371,7 @@ TEST_CASE("In fullscreen, Esc quits with exit code 0", "[options][fullscreen]") 
     graphicsSystem.events = {{}, {Window::Event::EscapePressed}};
     const LauncherRun run{graphicsSystem, {"--fullscreen"}};
     REQUIRE(graphicsSystem.record.windowSettings.windowMode == WindowMode::Fullscreen);
-    REQUIRE(graphicsSystem.record.frames.size() == 1);
+    REQUIRE(graphicsSystem.record.frameColours.size() == 1);
     REQUIRE(run.exitCode() == 0);
 }
 
@@ -424,7 +425,7 @@ TEST_CASE("Fullscreen is not remembered: after quitting fullscreen, the next sta
     first.screen = {.name = "HDMI-2", .position = Point{.x = 1920, .y = 0}};
     first.events = {{Window::Event::FullscreenKeyPressed}, {Window::Event::CloseRequested}};
     const LauncherRun firstRun{first, folder.path(), {}};
-    REQUIRE(first.record.fullscreenSwitches == 1);
+    REQUIRE(first.record.fullscreenSwitchCount == 1);
 
     FakeGraphicsSystem next;
     const LauncherRun nextRun{next, folder.path(), {}};
@@ -458,7 +459,7 @@ TEST_CASE("A start that fails never writes the settings file", "[settings][start
     windowFails.windowFailure = "no display available";
     const LauncherRun failedRun{windowFails, noFile.path(), {}};
     REQUIRE(failedRun.exitCode() == 1);
-    REQUIRE_FALSE(noFile.has("settings.ini"));
+    REQUIRE_FALSE(noFile.hasFile("settings.ini"));
 }
 
 TEST_CASE("When the settings file cannot be written: one warning line with its full path, exit 0",
@@ -522,9 +523,9 @@ TEST_CASE("With --software the renderers that can draw with the CPU are tried in
                                 GraphicsApi::Direct3D11, GraphicsApi::Vulkan};
     graphicsSystem.cpuGraphicsApis = {GraphicsApi::Direct3D12};
     const LauncherRun run{graphicsSystem, {"--software"}};
-    REQUIRE(graphicsSystem.record.cpuTries == std::vector<GraphicsApi>{GraphicsApi::Vulkan,
-                                                                       GraphicsApi::Direct3D11,
-                                                                       GraphicsApi::Direct3D12});
+    REQUIRE(graphicsSystem.record.triedCpuGraphicsApis ==
+            std::vector<GraphicsApi>{GraphicsApi::Vulkan, GraphicsApi::Direct3D11,
+                                     GraphicsApi::Direct3D12});
     // A failed try closes its window: a renderer on another graphics API never reuses it.
     REQUIRE(graphicsSystem.record.steps ==
             std::vector<std::string>{"open window", "start CPU renderer", "close window",
@@ -541,7 +542,8 @@ TEST_CASE("With --software the renderers that can draw with the CPU are tried in
     windows.available = {GraphicsApi::OpenGL, GraphicsApi::Direct3D11};
     windows.cpuGraphicsApis = {GraphicsApi::Direct3D11};
     const LauncherRun windowsRun{windows, {"--software"}};
-    REQUIRE(windows.record.cpuTries == std::vector<GraphicsApi>{GraphicsApi::Direct3D11});
+    REQUIRE(windows.record.triedCpuGraphicsApis ==
+            std::vector<GraphicsApi>{GraphicsApi::Direct3D11});
     REQUIRE(windows.record.titles == std::vector<std::string>{titleWith("Direct3D 11, software")});
 }
 
@@ -563,7 +565,7 @@ TEST_CASE("The --software option combines with --fullscreen in any order",
     graphicsSystem.events = {{Window::Event::FullscreenKeyPressed}, {}};
     const LauncherRun run{graphicsSystem, {"--fullscreen", "--software"}};
     REQUIRE(graphicsSystem.record.windowSettings.windowMode == WindowMode::Fullscreen);
-    REQUIRE(graphicsSystem.record.fullscreenSwitches == 1);
+    REQUIRE(graphicsSystem.record.fullscreenSwitchCount == 1);
     REQUIRE(graphicsSystem.record.titles ==
             std::vector<std::string>{titleWith("Vulkan, software")});
 }
@@ -596,12 +598,13 @@ TEST_CASE("When no renderer can draw with the CPU: one message, no window left o
     FakeGraphicsSystem noneAvailable; // as on macOS: no renderer that can draw with the CPU
     noneAvailable.available = {GraphicsApi::OpenGL, GraphicsApi::Metal};
     requireNoCpuRenderer(noneAvailable);
-    REQUIRE(noneAvailable.record.cpuTries.empty());
+    REQUIRE(noneAvailable.record.triedCpuGraphicsApis.empty());
 
     FakeGraphicsSystem noneStarts; // as on Linux without a CPU Vulkan driver
     noneStarts.available = {GraphicsApi::Vulkan, GraphicsApi::OpenGL};
     requireNoCpuRenderer(noneStarts);
-    REQUIRE(noneStarts.record.cpuTries == std::vector<GraphicsApi>{GraphicsApi::Vulkan});
+    REQUIRE(noneStarts.record.triedCpuGraphicsApis ==
+            std::vector<GraphicsApi>{GraphicsApi::Vulkan});
 }
 
 TEST_CASE("Without --software, a renderer on the graphics card has no ', software' in the title",
@@ -609,7 +612,7 @@ TEST_CASE("Without --software, a renderer on the graphics card has no ', softwar
     FakeGraphicsSystem graphicsSystem;
     graphicsSystem.rendererDisplayName = "Vulkan";
     const LauncherRun run{graphicsSystem, {}};
-    REQUIRE(graphicsSystem.record.cpuTries.empty());
+    REQUIRE(graphicsSystem.record.triedCpuGraphicsApis.empty());
     REQUIRE(graphicsSystem.record.titles == std::vector<std::string>{titleWith("Vulkan")});
 }
 

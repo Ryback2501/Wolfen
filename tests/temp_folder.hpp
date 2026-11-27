@@ -15,11 +15,11 @@ namespace wolfen::tests {
 class TempFolder {
   public:
     TempFolder() {
-        std::random_device random;
+        std::random_device randomDevice;
         // A random name, again until it is one no other folder has.
         while (true) {
             path_ = std::filesystem::temp_directory_path() /
-                    ("wolfen-test-" + std::to_string(random()));
+                    ("wolfen-test-" + std::to_string(randomDevice()));
             if (std::filesystem::create_directory(path_)) {
                 break;
             }
@@ -47,7 +47,7 @@ class TempFolder {
         std::ifstream file{path_ / name};
         return {std::istreambuf_iterator<char>{file}, std::istreambuf_iterator<char>{}};
     }
-    [[nodiscard]] bool has(std::string_view name) const {
+    [[nodiscard]] bool hasFile(std::string_view name) const {
         return std::filesystem::exists(path_ / name);
     }
 

@@ -25,13 +25,14 @@ struct GraphicsRecord {
     std::vector<std::string> steps; // "open window", "start renderer", "close renderer", ...
     engine::platform::Window::Settings windowSettings; // as asked for by the last openWindow()
     std::vector<std::string> titles;
-    std::vector<engine::Colour> frames;
-    std::vector<engine::Size> resizes;
+    std::vector<engine::Colour> frameColours;
+    std::vector<engine::Size> resizedPixelSizes;
     // As asked of the last startRenderer().
     std::optional<engine::render::GraphicsApi> requestedGraphicsApi;
-    std::vector<engine::render::GraphicsApi> cpuTries; // every startCpuRenderer() call, in order
-    int waits{};                        // how many times the game slept until the window had events
-    int fullscreenSwitches{};           // how many times the game switched fullscreen on or off
+    std::vector<engine::render::GraphicsApi>
+        triedCpuGraphicsApis;           // every startCpuRenderer() call, in order
+    int waitCount{};                    // how many times the game slept until the window had events
+    int fullscreenSwitchCount{};        // how many times the game switched fullscreen on or off
     std::string outputWhenWindowOpened; // what the game had printed when it opened the window
 };
 
@@ -67,7 +68,7 @@ class FakeWindow final : public engine::platform::Window {
         return batch;
     }
     std::vector<engine::platform::Window::Event> waitEvents() override {
-        ++record_->waits;
+        ++record_->waitCount;
         return pollEvents();
     }
     [[nodiscard]] engine::Size pixelSize() const override {
@@ -77,7 +78,7 @@ class FakeWindow final : public engine::platform::Window {
         record_->titles.emplace_back(title);
     }
     void switchFullscreen() override {
-        ++record_->fullscreenSwitches;
+        ++record_->fullscreenSwitchCount;
     }
     [[nodiscard]] engine::platform::Screen screen() const override {
         return screen_;
@@ -114,10 +115,10 @@ class FakeRenderer final : public engine::render::Renderer {
         return drawsWithCpu_;
     }
     void resize(engine::Size pixelSize) override {
-        record_->resizes.push_back(pixelSize);
+        record_->resizedPixelSizes.push_back(pixelSize);
     }
     void drawFrame(engine::Colour backgroundColour) override {
-        record_->frames.push_back(backgroundColour);
+        record_->frameColours.push_back(backgroundColour);
     }
 
   private:
@@ -178,7 +179,7 @@ class FakeGraphicsSystem final : public engine::app::GraphicsSystem {
     startCpuRenderer(engine::platform::Window& /*window*/,
                      engine::render::GraphicsApi graphicsApi) override {
         record.steps.emplace_back("start CPU renderer");
-        record.cpuTries.push_back(graphicsApi);
+        record.triedCpuGraphicsApis.push_back(graphicsApi);
         if (std::ranges::find(cpuGraphicsApis, graphicsApi) == cpuGraphicsApis.end()) {
             throw engine::StartupError{"no CPU device"};
         }
