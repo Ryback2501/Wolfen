@@ -116,8 +116,8 @@ class FakeRenderer final : public engine::render::Renderer {
     void resize(engine::Size pixelSize) override {
         record_->resizes.push_back(pixelSize);
     }
-    void drawFrame(engine::Colour background) override {
-        record_->frames.push_back(background);
+    void drawFrame(engine::Colour backgroundColour) override {
+        record_->frames.push_back(backgroundColour);
     }
 
   private:

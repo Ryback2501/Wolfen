@@ -26,7 +26,7 @@ class Renderer {
     // The window's size in pixels changed.
     virtual void resize(Size pixelSize) = 0;
     // Draws one frame: the whole window in the background colour.
-    virtual void drawFrame(Colour background) = 0;
+    virtual void drawFrame(Colour backgroundColour) = 0;
 };
 
 } // namespace wolfen::engine::render

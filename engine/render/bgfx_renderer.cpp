@@ -178,8 +178,8 @@ void BgfxRenderer::resize(Size pixelSize) {
     fitMainViewToWindow();
 }
 
-void BgfxRenderer::drawFrame(Colour background) {
-    bgfx::setViewClear(mainView, BGFX_CLEAR_COLOR, packed(background));
+void BgfxRenderer::drawFrame(Colour backgroundColour) {
+    bgfx::setViewClear(mainView, BGFX_CLEAR_COLOR, packed(backgroundColour));
     bgfx::touch(mainView); // the view is drawn (cleared) even with nothing submitted to it
     bgfx::frame();
 }

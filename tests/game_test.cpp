@@ -174,7 +174,7 @@ TEST_CASE("A given renderer that fails to start: reported, nothing printed, wind
     FakeGraphicsSystem graphics;
     graphics.rendererFailure = "the device could not be created";
     const GameRun run{graphics, GraphicsApi::Vulkan};
-    REQUIRE(run.outcome() == Game::Outcome::ChosenRendererFailed);
+    REQUIRE(run.outcome() == Game::Outcome::ChosenGraphicsApiFailed);
     REQUIRE(run.out() == versionLine()); // the start line comes before the failure
     REQUIRE(run.err().empty());
     REQUIRE(graphics.record.steps ==

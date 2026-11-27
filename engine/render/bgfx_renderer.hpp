@@ -41,7 +41,7 @@ class BgfxRenderer final : public Renderer {
     [[nodiscard]] std::string_view name() const override;
     [[nodiscard]] bool drawsWithCpu() const override;
     void resize(Size pixelSize) override;
-    void drawFrame(Colour background) override;
+    void drawFrame(Colour backgroundColour) override;
 
   private:
     std::string name_;

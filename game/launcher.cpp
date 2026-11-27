@@ -57,7 +57,7 @@ int Launcher::run(std::span<const std::string_view> args) {
     case Game::Outcome::Ended:
         saveScreen(settingsFile, game.screenAtQuit());
         return 0;
-    case Game::Outcome::ChosenRendererFailed:
+    case Game::Outcome::ChosenGraphicsApiFailed:
         *err_ << "Renderer '"
               << CommandLine::graphicsApiName(graphicsApi.value_or(GraphicsApi::Other))
               << "' could not be started on this computer.\n";

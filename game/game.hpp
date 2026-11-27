@@ -23,10 +23,10 @@ class Game {
   public:
     // How a run of the game ended.
     enum class Outcome : std::uint8_t {
-        Ended,                // played until the player closed it
-        ChosenRendererFailed, // the graphics API it was given could not start; nothing on stderr
-        CouldNotStart,        // it could not start; "Wolfen could not start: ..." was printed
-        NoCpuRenderer,        // no renderer could start on a CPU device; nothing on stderr
+        Ended,                   // played until the player closed it
+        ChosenGraphicsApiFailed, // the graphics API it was given could not start; nothing on stderr
+        CouldNotStart,           // it could not start; "Wolfen could not start: ..." was printed
+        NoCpuRenderer,           // no renderer could start on a CPU device; nothing on stderr
     };
 
     Game(std::ostream& out, std::ostream& err, engine::app::GraphicsSystem& graphics);
@@ -61,9 +61,9 @@ class Game {
     // Prints the start line, then tries each way to start a renderer in turn, each in a window of
     // its own: a window whose renderer does not start closes before the next try, so no graphics
     // API ever reuses another's window. Plays with the first renderer that starts, until the game
-    // ends. Ends with `whenNoRenderer` when none starts.
+    // ends. Ends with `noRendererOutcome` when none starts.
     Outcome runWith(engine::platform::WindowMode windowMode, const engine::platform::Screen& screen,
-                    std::span<const RendererStart> starts, Outcome whenNoRenderer);
+                    std::span<const RendererStart> rendererStarts, Outcome noRendererOutcome);
     // The main loop: handles the window's events and draws a frame, until the game should end.
     static void play(engine::platform::Window& window, engine::render::Renderer& renderer);
 
