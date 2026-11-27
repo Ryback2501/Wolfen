@@ -80,9 +80,9 @@ void Launcher::saveScreen(const std::optional<SettingsFile>& settingsFile,
     }
     if (!settingsFile->save(screen)) {
         // The path's own characters (UTF-8), whatever the system's code page.
-        const std::u8string path = settingsFile->path().u8string();
-        *err_ << "Warning: could not save settings to " << std::string(path.begin(), path.end())
-              << '\n';
+        const std::u8string pathText = settingsFile->path().u8string();
+        *err_ << "Warning: could not save settings to "
+              << std::string(pathText.begin(), pathText.end()) << '\n';
     }
 }
 
