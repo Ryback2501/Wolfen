@@ -29,8 +29,8 @@ struct GraphicsRecord {
     std::vector<engine::Size> resizedPixelSizes;
     // As asked of the last startRenderer().
     std::optional<engine::render::GraphicsApi> requestedGraphicsApi;
-    std::vector<engine::render::GraphicsApi>
-        triedCpuGraphicsApis;           // every startCpuRenderer() call, in order
+    // Every startCpuRenderer() call, in order.
+    std::vector<engine::render::GraphicsApi> triedCpuGraphicsApis;
     int waitCount{};                    // how many times the game slept until the window had events
     int fullscreenSwitchCount{};        // how many times the game switched fullscreen on or off
     std::string outputWhenWindowOpened; // what the game had printed when it opened the window
