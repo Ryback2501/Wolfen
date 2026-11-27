@@ -23,7 +23,7 @@ using engine::app::GraphicsSystem;
 using engine::platform::Screen;
 using engine::platform::Window;
 using engine::platform::WindowMode;
-using engine::render::Backend;
+using engine::render::GraphicsApi;
 using engine::render::Renderer;
 
 namespace {
@@ -32,7 +32,8 @@ constexpr Size windowSize{.width = 1280, .height = 720};
 constexpr Colour background{.red = 0x64, .green = 0x95, .blue = 0xED, .alpha = 0xFF};
 
 // The renderers that can draw with the CPU, in the order runOnCpu() tries them.
-constexpr std::array cpuRenderers{Backend::Vulkan, Backend::Direct3D11, Backend::Direct3D12};
+constexpr std::array cpuRenderers{GraphicsApi::Vulkan, GraphicsApi::Direct3D11,
+                                  GraphicsApi::Direct3D12};
 
 } // namespace
 
@@ -51,7 +52,7 @@ const Screen& Game::screenAtQuit() const {
     return screenAtQuit_;
 }
 
-Game::Outcome Game::run(std::optional<Backend> backend, WindowMode windowMode,
+Game::Outcome Game::run(std::optional<GraphicsApi> backend, WindowMode windowMode,
                         const Screen& screen) {
     const std::array<RendererStart, 1> starts{
         [this, backend](Window& window) -> std::unique_ptr<Renderer> {
@@ -68,9 +69,9 @@ Game::Outcome Game::run(std::optional<Backend> backend, WindowMode windowMode,
 }
 
 Game::Outcome Game::runOnCpu(WindowMode windowMode, const Screen& screen) {
-    const std::vector<Backend> available = graphics_->availableBackends();
+    const std::vector<GraphicsApi> available = graphics_->availableBackends();
     std::vector<RendererStart> starts;
-    for (const Backend backend : cpuRenderers) {
+    for (const GraphicsApi backend : cpuRenderers) {
         if (std::ranges::find(available, backend) == available.end()) {
             continue;
         }

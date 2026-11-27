@@ -2,7 +2,7 @@
 #define WOLFEN_ENGINE_RENDER_BGFX_RENDERER_HPP
 
 #include "platform/window.hpp"
-#include "render/backend.hpp"
+#include "render/graphics_api.hpp"
 #include "render/renderer.hpp"
 
 #include <cstdint>
@@ -24,13 +24,13 @@ class BgfxRenderer final : public Renderer {
 
     // The backends bgfx supports on this computer, among the ones Wolfen names. Needs no window
     // and does not start bgfx.
-    static std::vector<Backend> availableBackends();
+    static std::vector<GraphicsApi> availableBackends();
 
     // Starts the given backend and no other one; without one, lets bgfx pick the best backend
     // for this computer, falling back to another if it fails. On Device::Cpu, a start on
     // anything but a CPU device counts as failed. Throws StartupError when it cannot start.
     explicit BgfxRenderer(const platform::Window& window,
-                          std::optional<Backend> backend = std::nullopt,
+                          std::optional<GraphicsApi> backend = std::nullopt,
                           Device device = Device::Best);
     BgfxRenderer(const BgfxRenderer&) = delete;
     BgfxRenderer& operator=(const BgfxRenderer&) = delete;

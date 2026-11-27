@@ -17,14 +17,14 @@ namespace wolfen::game {
 
 using engine::app::GraphicsSystem;
 using engine::platform::Screen;
-using engine::render::Backend;
+using engine::render::GraphicsApi;
 
 Launcher::Launcher(std::ostream& out, std::ostream& err, GraphicsSystem& graphics,
                    std::optional<std::filesystem::path> gameFolder)
     : out_{&out}, err_{&err}, graphics_{&graphics}, gameFolder_{std::move(gameFolder)} {}
 
 int Launcher::run(std::span<const std::string_view> args) {
-    const std::vector<Backend> available = graphics_->availableBackends();
+    const std::vector<GraphicsApi> available = graphics_->availableBackends();
     const CommandLine commandLine{args, available};
 
     switch (commandLine.action()) {
@@ -48,7 +48,7 @@ int Launcher::run(std::span<const std::string_view> args) {
     }
     const Screen screen = settingsFile ? settingsFile->screen() : Screen{};
 
-    const std::optional<Backend> backend = commandLine.backend();
+    const std::optional<GraphicsApi> backend = commandLine.backend();
     Game game{*out_, *err_, *graphics_};
     const Game::Outcome outcome = commandLine.isSoftwareAsked()
                                       ? game.runOnCpu(commandLine.windowMode(), screen)
@@ -58,7 +58,7 @@ int Launcher::run(std::span<const std::string_view> args) {
         saveScreen(settingsFile, game.screenAtQuit());
         return 0;
     case Game::Outcome::ChosenRendererFailed:
-        *err_ << "Renderer '" << CommandLine::optionName(backend.value_or(Backend::Other))
+        *err_ << "Renderer '" << CommandLine::optionName(backend.value_or(GraphicsApi::Other))
               << "' could not be started on this computer.\n";
         return 1;
     case Game::Outcome::NoCpuRenderer:

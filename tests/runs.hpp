@@ -6,7 +6,7 @@
 #include "game.hpp"
 #include "launcher.hpp"
 #include "platform/window_mode.hpp"
-#include "render/backend.hpp"
+#include "render/graphics_api.hpp"
 #include "temp_folder.hpp"
 
 #include <filesystem>
@@ -57,7 +57,7 @@ class GameRun final : public RunOutput {
     explicit GameRun(FakeGraphicsSystem& graphics) : outcome_{watchedGame(graphics).run()} {}
     // Runs it with the given renderer choice, already checked by the launcher, in the given
     // window mode.
-    GameRun(FakeGraphicsSystem& graphics, std::optional<engine::render::Backend> backend,
+    GameRun(FakeGraphicsSystem& graphics, std::optional<engine::render::GraphicsApi> backend,
             engine::platform::WindowMode windowMode = engine::platform::WindowMode::Windowed)
         : outcome_{watchedGame(graphics).run(backend, windowMode, {})} {}
 

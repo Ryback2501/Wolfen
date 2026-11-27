@@ -27,8 +27,9 @@ struct GraphicsRecord {
     std::vector<std::string> titles;
     std::vector<engine::Colour> frames;
     std::vector<engine::Size> resizes;
-    std::optional<engine::render::Backend> requestedBackend; // as asked of the last startRenderer()
-    std::vector<engine::render::Backend> cpuTries; // every startCpuRenderer() call, in order
+    std::optional<engine::render::GraphicsApi>
+        requestedBackend;                              // as asked of the last startRenderer()
+    std::vector<engine::render::GraphicsApi> cpuTries; // every startCpuRenderer() call, in order
     int waits{};                        // how many times the game slept until the window had events
     int fullscreenSwitches{};           // how many times the game switched fullscreen on or off
     std::string outputWhenWindowOpened; // what the game had printed when it opened the window
@@ -135,16 +136,16 @@ class FakeGraphicsSystem final : public engine::app::GraphicsSystem {
     std::string rendererName{"Fake"};
     bool rendererDrawsWithCpu{false}; // whether startRenderer() ends up on a CPU device
     // The renderers that can start on a CPU device; startCpuRenderer() fails for the others.
-    std::vector<engine::render::Backend> cpuBackends;
+    std::vector<engine::render::GraphicsApi> cpuBackends;
     // The screen the window is on, as the system knows it.
     engine::platform::Screen screen{.name = "Fake screen", .position = std::nullopt};
     std::optional<std::string> windowFailure;   // when set, openWindow() fails with it
     std::optional<std::string> rendererFailure; // when set, startRenderer() fails with it
-    std::vector<engine::render::Backend> available{engine::render::Backend::Vulkan,
-                                                   engine::render::Backend::OpenGL};
+    std::vector<engine::render::GraphicsApi> available{engine::render::GraphicsApi::Vulkan,
+                                                       engine::render::GraphicsApi::OpenGL};
     const std::ostringstream* watchedOutput{}; // when set, recorded when the window opens
 
-    [[nodiscard]] std::vector<engine::render::Backend> availableBackends() const override {
+    [[nodiscard]] std::vector<engine::render::GraphicsApi> availableBackends() const override {
         return available;
     }
 
@@ -164,7 +165,7 @@ class FakeGraphicsSystem final : public engine::app::GraphicsSystem {
 
     std::unique_ptr<engine::render::Renderer>
     startRenderer(engine::platform::Window& /*window*/,
-                  std::optional<engine::render::Backend> backend) override {
+                  std::optional<engine::render::GraphicsApi> backend) override {
         record.requestedBackend = backend;
         record.steps.emplace_back("start renderer");
         if (rendererFailure) {
@@ -175,7 +176,7 @@ class FakeGraphicsSystem final : public engine::app::GraphicsSystem {
 
     std::unique_ptr<engine::render::Renderer>
     startCpuRenderer(engine::platform::Window& /*window*/,
-                     engine::render::Backend backend) override {
+                     engine::render::GraphicsApi backend) override {
         record.steps.emplace_back("start CPU renderer");
         record.cpuTries.push_back(backend);
         if (std::ranges::find(cpuBackends, backend) == cpuBackends.end()) {

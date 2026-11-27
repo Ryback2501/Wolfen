@@ -9,8 +9,8 @@
 
 using Catch::Matchers::ContainsSubstring;
 using wolfen::engine::Size;
-using wolfen::engine::render::Backend;
 using wolfen::engine::render::BgfxRenderer;
+using wolfen::engine::render::GraphicsApi;
 using wolfen::tests::FakeWindow;
 using wolfen::tests::GraphicsRecord;
 
@@ -26,12 +26,12 @@ TEST_CASE("The renderer refuses a window without a native handle, before startin
 
 TEST_CASE("Outside Windows, Direct3D is never reported as available", "[renderer]") {
     // Only asks bgfx what it supports: no window, no GPU, bgfx is not started.
-    const std::vector<Backend> backends = BgfxRenderer::availableBackends();
+    const std::vector<GraphicsApi> backends = BgfxRenderer::availableBackends();
 #ifdef _WIN32
     SUCCEED("Direct3D belongs on Windows");
 #else
-    REQUIRE(std::ranges::find(backends, Backend::Direct3D11) == backends.end());
-    REQUIRE(std::ranges::find(backends, Backend::Direct3D12) == backends.end());
+    REQUIRE(std::ranges::find(backends, GraphicsApi::Direct3D11) == backends.end());
+    REQUIRE(std::ranges::find(backends, GraphicsApi::Direct3D12) == backends.end());
 #endif
 }
 

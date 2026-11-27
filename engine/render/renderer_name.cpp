@@ -4,7 +4,7 @@
 
 namespace wolfen::engine::render {
 
-std::string_view RendererName::display(Backend backend, std::string_view engineName) {
+std::string_view RendererName::display(GraphicsApi backend, std::string_view engineName) {
     const RendererTable::Row* row = RendererTable::find(backend);
     return row == nullptr ? engineName : row->displayName;
 }

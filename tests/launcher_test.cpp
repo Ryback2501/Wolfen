@@ -4,7 +4,7 @@
 #include "platform/screen.hpp"
 #include "platform/window.hpp"
 #include "platform/window_mode.hpp"
-#include "render/backend.hpp"
+#include "render/graphics_api.hpp"
 #include "runs.hpp"
 #include "temp_folder.hpp"
 
@@ -24,7 +24,7 @@ using wolfen::engine::Point;
 using wolfen::engine::platform::Screen;
 using wolfen::engine::platform::Window;
 using wolfen::engine::platform::WindowMode;
-using wolfen::engine::render::Backend;
+using wolfen::engine::render::GraphicsApi;
 using wolfen::tests::FakeGraphicsSystem;
 using wolfen::tests::LauncherRun;
 using wolfen::tests::TempFolder;
@@ -64,7 +64,7 @@ void requireOptionError(FakeGraphicsSystem& graphics, std::initializer_list<std:
 
 // A start in fullscreen with the given renderer choice: the start line, no error, exit 0.
 void requireFullscreenStart(std::initializer_list<std::string_view> args,
-                            std::optional<Backend> backend) {
+                            std::optional<GraphicsApi> backend) {
     FakeGraphicsSystem graphics;
     const LauncherRun run{graphics, args};
     REQUIRE(run.out() == versionLine());
@@ -149,10 +149,10 @@ std::ptrdiff_t countOf(const std::vector<std::string>& steps, std::string_view s
 // and exits with 0.
 void requireSoftwareStart(std::initializer_list<std::string_view> args) {
     FakeGraphicsSystem graphics;
-    graphics.cpuBackends = {Backend::Vulkan};
+    graphics.cpuBackends = {GraphicsApi::Vulkan};
     const LauncherRun run{graphics, args};
     REQUIRE(run.err().empty());
-    REQUIRE(graphics.record.cpuTries == std::vector<Backend>{Backend::Vulkan});
+    REQUIRE(graphics.record.cpuTries == std::vector<GraphicsApi>{GraphicsApi::Vulkan});
     REQUIRE(countOf(graphics.record.steps, "start renderer") == 0);
     REQUIRE(graphics.record.titles == std::vector<std::string>{titleWith("Vulkan, software")});
     REQUIRE(run.exitCode() == 0);
@@ -196,11 +196,11 @@ TEST_CASE("The --help option wins over a wrong option and over --version", "[opt
 TEST_CASE("The usage lists only the renderers available on this computer, in a fixed order",
           "[options][help]") {
     FakeGraphicsSystem graphics;
-    graphics.available = {Backend::OpenGL, Backend::Vulkan, Backend::Direct3D12};
+    graphics.available = {GraphicsApi::OpenGL, GraphicsApi::Vulkan, GraphicsApi::Direct3D12};
     REQUIRE(LauncherRun{graphics, {"--help"}}.out() == usage("vulkan, opengl, d3d12"));
 
     FakeGraphicsSystem mac;
-    mac.available = {Backend::Metal};
+    mac.available = {GraphicsApi::Metal};
     REQUIRE(LauncherRun{mac, {"--help"}}.out() == usage("metal"));
 
     FakeGraphicsSystem none;
@@ -236,7 +236,7 @@ TEST_CASE("The --version option wins over wrong and repeated options", "[options
 TEST_CASE("The --renderer option starts only the chosen renderer, after the start line",
           "[options][renderer]") {
     for (const auto& [name, backend] :
-         {std::pair{"vulkan", Backend::Vulkan}, std::pair{"opengl", Backend::OpenGL}}) {
+         {std::pair{"vulkan", GraphicsApi::Vulkan}, std::pair{"opengl", GraphicsApi::OpenGL}}) {
         FakeGraphicsSystem graphics;
         const LauncherRun run{graphics, {"--renderer", name}};
         REQUIRE(run.out() == versionLine());
@@ -349,8 +349,8 @@ TEST_CASE("The usage lists --fullscreen right after --renderer, and mentions no 
 TEST_CASE("The --fullscreen option starts the game fullscreen, in any order with --renderer",
           "[options][fullscreen]") {
     requireFullscreenStart({"--fullscreen"}, std::nullopt);
-    requireFullscreenStart({"--fullscreen", "--renderer", "opengl"}, Backend::OpenGL);
-    requireFullscreenStart({"--renderer", "opengl", "--fullscreen"}, Backend::OpenGL);
+    requireFullscreenStart({"--fullscreen", "--renderer", "opengl"}, GraphicsApi::OpenGL);
+    requireFullscreenStart({"--renderer", "opengl", "--fullscreen"}, GraphicsApi::OpenGL);
 }
 
 TEST_CASE("Without --fullscreen the game starts in a window", "[options][fullscreen]") {
@@ -516,12 +516,13 @@ TEST_CASE("With --software the renderers that can draw with the CPU are tried in
           "Direct3D 11, Direct3D 12, each in a window of its own",
           "[software]") {
     FakeGraphicsSystem graphics;
-    graphics.available = {Backend::Direct3D12, Backend::OpenGL, Backend::Direct3D11,
-                          Backend::Vulkan};
-    graphics.cpuBackends = {Backend::Direct3D12};
+    graphics.available = {GraphicsApi::Direct3D12, GraphicsApi::OpenGL, GraphicsApi::Direct3D11,
+                          GraphicsApi::Vulkan};
+    graphics.cpuBackends = {GraphicsApi::Direct3D12};
     const LauncherRun run{graphics, {"--software"}};
-    REQUIRE(graphics.record.cpuTries ==
-            std::vector<Backend>{Backend::Vulkan, Backend::Direct3D11, Backend::Direct3D12});
+    REQUIRE(graphics.record.cpuTries == std::vector<GraphicsApi>{GraphicsApi::Vulkan,
+                                                                 GraphicsApi::Direct3D11,
+                                                                 GraphicsApi::Direct3D12});
     // A failed try closes its window: a renderer on another graphics API never reuses it.
     REQUIRE(graphics.record.steps == std::vector<std::string>{"open window", "start CPU renderer",
                                                               "close window", "open window",
@@ -534,10 +535,10 @@ TEST_CASE("With --software the renderers that can draw with the CPU are tried in
 
     // Only the renderers available on this computer are tried.
     FakeGraphicsSystem windows;
-    windows.available = {Backend::OpenGL, Backend::Direct3D11};
-    windows.cpuBackends = {Backend::Direct3D11};
+    windows.available = {GraphicsApi::OpenGL, GraphicsApi::Direct3D11};
+    windows.cpuBackends = {GraphicsApi::Direct3D11};
     const LauncherRun windowsRun{windows, {"--software"}};
-    REQUIRE(windows.record.cpuTries == std::vector<Backend>{Backend::Direct3D11});
+    REQUIRE(windows.record.cpuTries == std::vector<GraphicsApi>{GraphicsApi::Direct3D11});
     REQUIRE(windows.record.titles == std::vector<std::string>{titleWith("Direct3D 11, software")});
 }
 
@@ -555,7 +556,7 @@ TEST_CASE("The --software option combines with --fullscreen in any order",
     requireSoftwareStart({"--software", "--fullscreen"});
     requireSoftwareStart({"--fullscreen", "--software"});
     FakeGraphicsSystem graphics;
-    graphics.cpuBackends = {Backend::Vulkan};
+    graphics.cpuBackends = {GraphicsApi::Vulkan};
     graphics.events = {{Window::Event::FullscreenKeyPressed}, {}};
     const LauncherRun run{graphics, {"--fullscreen", "--software"}};
     REQUIRE(graphics.record.windowSettings.mode == WindowMode::Fullscreen);
@@ -588,14 +589,14 @@ TEST_CASE(
 TEST_CASE("When no renderer can draw with the CPU: one message, no window left open, exit 1",
           "[software]") {
     FakeGraphicsSystem noneAvailable; // as on macOS: no renderer that can draw with the CPU
-    noneAvailable.available = {Backend::OpenGL, Backend::Metal};
+    noneAvailable.available = {GraphicsApi::OpenGL, GraphicsApi::Metal};
     requireNoCpuRenderer(noneAvailable);
     REQUIRE(noneAvailable.record.cpuTries.empty());
 
     FakeGraphicsSystem noneStarts; // as on Linux without a CPU Vulkan driver
-    noneStarts.available = {Backend::Vulkan, Backend::OpenGL};
+    noneStarts.available = {GraphicsApi::Vulkan, GraphicsApi::OpenGL};
     requireNoCpuRenderer(noneStarts);
-    REQUIRE(noneStarts.record.cpuTries == std::vector<Backend>{Backend::Vulkan});
+    REQUIRE(noneStarts.record.cpuTries == std::vector<GraphicsApi>{GraphicsApi::Vulkan});
 }
 
 TEST_CASE("Without --software, a renderer on the graphics card has no ', software' in the title",
@@ -622,7 +623,7 @@ TEST_CASE("With --software the saved screen is used, and saved again after a nor
     const TempFolder folder;
     folder.write("settings.ini", "screen=HDMI-2\nscreen_position=1920,0\n");
     FakeGraphicsSystem graphics;
-    graphics.cpuBackends = {Backend::Vulkan};
+    graphics.cpuBackends = {GraphicsApi::Vulkan};
     graphics.screen = {.name = "DP-1", .position = Point{.x = 0, .y = 0}};
     const LauncherRun run{graphics, folder.path(), {"--software"}};
     REQUIRE(graphics.record.windowSettings.screen ==

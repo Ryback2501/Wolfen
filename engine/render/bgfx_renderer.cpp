@@ -19,14 +19,14 @@ namespace {
 constexpr bgfx::ViewId mainView = 0;
 constexpr std::uint32_t resetFlags = BGFX_RESET_VSYNC; // one frame per screen refresh
 
-// The backend for a bgfx renderer type; Backend::Other for a type Wolfen does not name.
-Backend backendOf(bgfx::RendererType::Enum type) {
+// The backend for a bgfx renderer type; GraphicsApi::Other for a type Wolfen does not name.
+GraphicsApi backendOf(bgfx::RendererType::Enum type) {
     const RendererTable::Row* row = RendererTable::find(type);
-    return row == nullptr ? Backend::Other : row->backend;
+    return row == nullptr ? GraphicsApi::Other : row->backend;
 }
 
-// The bgfx renderer type for a backend; for Backend::Other, "let bgfx choose".
-bgfx::RendererType::Enum bgfxTypeOf(Backend backend) {
+// The bgfx renderer type for a backend; for GraphicsApi::Other, "let bgfx choose".
+bgfx::RendererType::Enum bgfxTypeOf(GraphicsApi backend) {
     const RendererTable::Row* row = RendererTable::find(backend);
     return row == nullptr ? bgfx::RendererType::Count : row->bgfxType;
 }
@@ -80,28 +80,29 @@ std::uint32_t packed(Colour colour) {
 
 } // namespace
 
-std::vector<Backend> BgfxRenderer::availableBackends() {
+std::vector<GraphicsApi> BgfxRenderer::availableBackends() {
     std::array<bgfx::RendererType::Enum, bgfx::RendererType::Count> types{};
     const std::uint8_t count =
         bgfx::getSupportedRenderers(static_cast<std::uint8_t>(types.size()), types.data());
-    std::vector<Backend> backends;
+    std::vector<GraphicsApi> backends;
     for (std::size_t i = 0; i < count; ++i) {
-        const Backend backend = backendOf(types.at(i));
+        const GraphicsApi backend = backendOf(types.at(i));
 #ifndef _WIN32
         // bgfx also builds Direct3D outside Windows (for layers such as DXVK) and reports it as
         // supported, although it cannot start on a normal Linux desktop.
-        if (backend == Backend::Direct3D11 || backend == Backend::Direct3D12) {
+        if (backend == GraphicsApi::Direct3D11 || backend == GraphicsApi::Direct3D12) {
             continue;
         }
 #endif
-        if (backend != Backend::Other && std::ranges::find(backends, backend) == backends.end()) {
+        if (backend != GraphicsApi::Other &&
+            std::ranges::find(backends, backend) == backends.end()) {
             backends.push_back(backend);
         }
     }
     return backends;
 }
 
-BgfxRenderer::BgfxRenderer(const platform::Window& window, std::optional<Backend> backend,
+BgfxRenderer::BgfxRenderer(const platform::Window& window, std::optional<GraphicsApi> backend,
                            Device device) {
     const platform::Window::NativeHandles nativeHandles = window.nativeHandles();
     if (nativeHandles.window == nullptr) {
@@ -115,7 +116,7 @@ BgfxRenderer::BgfxRenderer(const platform::Window& window, std::optional<Backend
 
     bgfx::Init init;
     // The chosen backend and nothing else, or the best one for this computer with fallback.
-    const bool backendChosen = backend.has_value() && *backend != Backend::Other;
+    const bool backendChosen = backend.has_value() && *backend != GraphicsApi::Other;
     init.type = backendChosen ? bgfxTypeOf(*backend) : bgfx::RendererType::Count;
     init.fallback = !backendChosen;
     if (device == Device::Cpu) {
@@ -123,7 +124,7 @@ BgfxRenderer::BgfxRenderer(const platform::Window& window, std::optional<Backend
         // machine's or a remote session's display) may come first. bgfx looks only at the first
         // four adapters and WARP is listed last, so a computer with more misses it; this is
         // accepted. Vulkan picks the device bgfx marks with its software id: a device of type CPU.
-        if (backend == Backend::Direct3D11 || backend == Backend::Direct3D12) {
+        if (backend == GraphicsApi::Direct3D11 || backend == GraphicsApi::Direct3D12) {
             init.vendorId = BGFX_PCI_ID_MICROSOFT;
             init.deviceId = warpDeviceId;
         } else {

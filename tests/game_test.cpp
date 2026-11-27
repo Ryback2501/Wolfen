@@ -18,7 +18,7 @@ using wolfen::engine::Size;
 using wolfen::engine::Version;
 using wolfen::engine::platform::Window;
 using wolfen::engine::platform::WindowMode;
-using wolfen::engine::render::Backend;
+using wolfen::engine::render::GraphicsApi;
 using wolfen::engine::render::RendererName;
 using wolfen::game::Game;
 using wolfen::tests::FakeGraphicsSystem;
@@ -117,15 +117,15 @@ TEST_CASE("A renderer that cannot start: message on stderr, the game could not s
 }
 
 TEST_CASE("Renderer display names", "[renderer]") {
-    REQUIRE(RendererName::display(Backend::Vulkan, "Vulkan") == "Vulkan");
-    REQUIRE(RendererName::display(Backend::OpenGL, "OpenGL 2.1") == "OpenGL");
-    REQUIRE(RendererName::display(Backend::Metal, "Metal") == "Metal");
-    REQUIRE(RendererName::display(Backend::Direct3D11, "Direct3D 11") == "Direct3D 11");
-    REQUIRE(RendererName::display(Backend::Direct3D12, "Direct3D 12") == "Direct3D 12");
+    REQUIRE(RendererName::display(GraphicsApi::Vulkan, "Vulkan") == "Vulkan");
+    REQUIRE(RendererName::display(GraphicsApi::OpenGL, "OpenGL 2.1") == "OpenGL");
+    REQUIRE(RendererName::display(GraphicsApi::Metal, "Metal") == "Metal");
+    REQUIRE(RendererName::display(GraphicsApi::Direct3D11, "Direct3D 11") == "Direct3D 11");
+    REQUIRE(RendererName::display(GraphicsApi::Direct3D12, "Direct3D 12") == "Direct3D 12");
 }
 
 TEST_CASE("Any other renderer shows the rendering library's own name", "[renderer]") {
-    REQUIRE(RendererName::display(Backend::Other, "Noop") == "Noop");
+    REQUIRE(RendererName::display(GraphicsApi::Other, "Noop") == "Noop");
 }
 
 TEST_CASE("A hidden window is not drawn; the game sleeps until it is shown again", "[game]") {
@@ -151,7 +151,7 @@ TEST_CASE("A hidden window can still be closed", "[game]") {
 }
 
 TEST_CASE("The game starts the renderer it is given, after the start line", "[game][renderer]") {
-    for (const auto backend : {Backend::Vulkan, Backend::OpenGL}) {
+    for (const auto backend : {GraphicsApi::Vulkan, GraphicsApi::OpenGL}) {
         FakeGraphicsSystem graphics;
         const GameRun run{graphics, backend};
         REQUIRE(graphics.record.outputWhenWindowOpened == versionLine());
@@ -173,7 +173,7 @@ TEST_CASE("A given renderer that fails to start: reported, nothing printed, wind
           "[game][renderer][startup]") {
     FakeGraphicsSystem graphics;
     graphics.rendererFailure = "the device could not be created";
-    const GameRun run{graphics, Backend::Vulkan};
+    const GameRun run{graphics, GraphicsApi::Vulkan};
     REQUIRE(run.outcome() == Game::Outcome::ChosenRendererFailed);
     REQUIRE(run.out() == versionLine()); // the start line comes before the failure
     REQUIRE(run.err().empty());
@@ -189,7 +189,8 @@ TEST_CASE("Given no window mode, the game opens a window, not fullscreen", "[gam
 
 TEST_CASE("Asked for fullscreen, the game opens its window fullscreen, 1280x720 for later",
           "[game][fullscreen]") {
-    for (const auto backend : {std::optional<Backend>{}, std::optional<Backend>{Backend::OpenGL}}) {
+    for (const auto backend :
+         {std::optional<GraphicsApi>{}, std::optional<GraphicsApi>{GraphicsApi::OpenGL}}) {
         FakeGraphicsSystem graphics;
         const GameRun run{graphics, backend, WindowMode::Fullscreen};
         const auto& settings = graphics.record.windowSettings;
@@ -216,7 +217,7 @@ TEST_CASE("Switching fullscreen keeps the title with the renderer's name", "[gam
     FakeGraphicsSystem graphics;
     graphics.rendererName = "OpenGL";
     graphics.events = {{Window::Event::FullscreenKeyPressed}, {}};
-    const GameRun run{graphics, Backend::OpenGL, WindowMode::Fullscreen};
+    const GameRun run{graphics, GraphicsApi::OpenGL, WindowMode::Fullscreen};
     REQUIRE(graphics.record.fullscreenSwitches == 1);
     REQUIRE(
         graphics.record.titles ==

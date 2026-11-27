@@ -12,7 +12,7 @@
 namespace wolfen::game {
 
 using engine::platform::WindowMode;
-using engine::render::Backend;
+using engine::render::GraphicsApi;
 
 namespace {
 
@@ -80,16 +80,16 @@ std::string shownOption(const OptionRow& row) {
 
 struct NamedRenderer {
     std::string_view name;
-    Backend backend;
+    GraphicsApi backend;
 };
 
 // Every renderer name Wolfen knows, in the fixed order used wherever a list is printed.
 constexpr std::array<NamedRenderer, 5> knownRenderers{
-    {{.name = "vulkan", .backend = Backend::Vulkan},
-     {.name = "opengl", .backend = Backend::OpenGL},
-     {.name = "metal", .backend = Backend::Metal},
-     {.name = "d3d11", .backend = Backend::Direct3D11},
-     {.name = "d3d12", .backend = Backend::Direct3D12}}};
+    {{.name = "vulkan", .backend = GraphicsApi::Vulkan},
+     {.name = "opengl", .backend = GraphicsApi::OpenGL},
+     {.name = "metal", .backend = GraphicsApi::Metal},
+     {.name = "d3d11", .backend = GraphicsApi::Direct3D11},
+     {.name = "d3d12", .backend = GraphicsApi::Direct3D12}}};
 
 // The first row of the table that `matches` accepts, or null. A plain loop returning a pointer, so
 // the code does not depend on whether the library's array iterators are pointers.
@@ -120,7 +120,7 @@ bool contains(const List& list, const std::ranges::range_value_t<List>& item) {
 }
 
 // The available renderers, by name, in the fixed order: "vulkan, opengl", or "(none)".
-std::string availableList(std::span<const Backend> available) {
+std::string availableList(std::span<const GraphicsApi> available) {
     std::string list;
     for (const auto& named : knownRenderers) {
         if (contains(available, named.backend)) {
@@ -135,7 +135,8 @@ std::string availableList(std::span<const Backend> available) {
 
 // The software option is read first, because it changes how the renderer option is read wherever
 // that comes. It can never be another option's value, as it starts with '-'.
-CommandLine::CommandLine(std::span<const std::string_view> args, std::span<const Backend> available)
+CommandLine::CommandLine(std::span<const std::string_view> args,
+                         std::span<const GraphicsApi> available)
     : isSoftwareAsked_{contains(args, softwareRow.name)} {
     // Every word is read, and only the first error, reading left to right, is kept. The help
     // option, then the version option, win over everything else wherever they are.
@@ -204,7 +205,7 @@ CommandLine::CommandLine(std::span<const std::string_view> args, std::span<const
     }
 }
 
-void CommandLine::readRenderer(std::string_view name, std::span<const Backend> available) {
+void CommandLine::readRenderer(std::string_view name, std::span<const GraphicsApi> available) {
     const NamedRenderer* named = firstRow(
         knownRenderers, [name](const NamedRenderer& candidate) { return candidate.name == name; });
     if (named == nullptr || !contains(available, named->backend)) {
@@ -228,7 +229,7 @@ CommandLine::Action CommandLine::action() const {
     return action_;
 }
 
-std::optional<Backend> CommandLine::backend() const {
+std::optional<GraphicsApi> CommandLine::backend() const {
     return backend_;
 }
 
@@ -244,7 +245,7 @@ const std::string& CommandLine::error() const {
     return error_;
 }
 
-std::string CommandLine::usage(std::span<const Backend> available) {
+std::string CommandLine::usage(std::span<const GraphicsApi> available) {
     // The help lines start two spaces after the longest option as shown.
     std::size_t helpColumn = 0;
     for (const OptionRow& row : options) {
@@ -269,7 +270,7 @@ std::string CommandLine::hint() {
     return "Run 'wolfen " + std::string{helpRow.name} + "' to see the available options.";
 }
 
-std::string_view CommandLine::optionName(Backend backend) {
+std::string_view CommandLine::optionName(GraphicsApi backend) {
     const NamedRenderer* named =
         firstRow(knownRenderers, [backend](const NamedRenderer& candidate) {
             return candidate.backend == backend;

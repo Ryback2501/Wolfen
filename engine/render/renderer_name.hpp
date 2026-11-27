@@ -1,7 +1,7 @@
 #ifndef WOLFEN_ENGINE_RENDER_RENDERER_NAME_HPP
 #define WOLFEN_ENGINE_RENDER_RENDERER_NAME_HPP
 
-#include "render/backend.hpp"
+#include "render/graphics_api.hpp"
 
 #include <string_view>
 
@@ -13,7 +13,7 @@ namespace wolfen::engine::render {
 class RendererName {
   public:
     // engineName is the rendering library's own name for the backend, used for Other.
-    static std::string_view display(Backend backend, std::string_view engineName);
+    static std::string_view display(GraphicsApi backend, std::string_view engineName);
 };
 
 } // namespace wolfen::engine::render
