@@ -32,7 +32,7 @@ class CommandLine {
     // picks itself.
     [[nodiscard]] bool isSoftwareAsked() const;
     // For Error: the message to show, without the usage.
-    [[nodiscard]] const std::string& error() const;
+    [[nodiscard]] const std::string& errorMessage() const;
 
     // The usage text, listing the graphics APIs available on this computer.
     [[nodiscard]] static std::string
@@ -54,7 +54,7 @@ class CommandLine {
     std::optional<engine::render::GraphicsApi> graphicsApi_;
     engine::platform::WindowMode windowMode_{engine::platform::WindowMode::Windowed};
     bool isSoftwareAsked_{false};
-    std::string error_;
+    std::string errorMessage_;
 };
 
 } // namespace wolfen::game

@@ -35,7 +35,7 @@ int Launcher::run(std::span<const std::string_view> args) {
         *out_ << Game::name() << '\n';
         return 0;
     case CommandLine::Action::Error:
-        *err_ << commandLine.error() << '\n' << CommandLine::hint() << '\n';
+        *err_ << commandLine.errorMessage() << '\n' << CommandLine::hint() << '\n';
         return 1;
     case CommandLine::Action::Run:
         break;

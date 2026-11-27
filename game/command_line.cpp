@@ -23,58 +23,58 @@ enum class Option : std::uint8_t { Renderer, Fullscreen, Software, Help, Version
 struct OptionRow {
     Option option;
     std::string_view name;
-    // The option's value as the usage shows it ("<name>"); empty for an option with no value.
-    std::string_view valueShown;
-    // The option's value as its error names it ("a renderer name").
-    std::string_view valueNeeded;
-    // The usage's help line.
-    std::string_view help;
+    // In the usage ("<name>"); empty for an option with no value.
+    std::string_view valuePlaceholder;
+    // In the error when the value is missing ("a renderer name").
+    std::string_view valueDescription;
+    // In the usage.
+    std::string_view helpLine;
 };
 
 // Every start option, in the order the usage lists them.
 constexpr std::array<OptionRow, 5> options{{
     {.option = Option::Renderer,
      .name = "--renderer",
-     .valueShown = "<name>",
-     .valueNeeded = "a renderer name",
-     .help = "Draw with this renderer. Available on this computer:"},
+     .valuePlaceholder = "<name>",
+     .valueDescription = "a renderer name",
+     .helpLine = "Draw with this renderer. Available on this computer:"},
     {.option = Option::Fullscreen,
      .name = "--fullscreen",
-     .valueShown = "",
-     .valueNeeded = "",
-     .help = "Start in borderless fullscreen."},
+     .valuePlaceholder = "",
+     .valueDescription = "",
+     .helpLine = "Start in borderless fullscreen."},
     {.option = Option::Software,
      .name = "--software",
-     .valueShown = "",
-     .valueNeeded = "",
-     .help = "Draw with the CPU instead of the graphics card."},
+     .valuePlaceholder = "",
+     .valueDescription = "",
+     .helpLine = "Draw with the CPU instead of the graphics card."},
     {.option = Option::Help,
      .name = "--help",
-     .valueShown = "",
-     .valueNeeded = "",
-     .help = "Show this help and exit."},
+     .valuePlaceholder = "",
+     .valueDescription = "",
+     .helpLine = "Show this help and exit."},
     {.option = Option::Version,
      .name = "--version",
-     .valueShown = "",
-     .valueNeeded = "",
-     .help = "Show the version and exit."},
+     .valuePlaceholder = "",
+     .valueDescription = "",
+     .helpLine = "Show the version and exit."},
 }};
 
 // Whether the option takes a value (the word after it).
 constexpr bool takesValue(const OptionRow& row) {
-    return !row.valueShown.empty();
+    return !row.valuePlaceholder.empty();
 }
 
 // An option that takes a value names it both in the usage and in its error.
 static_assert(std::ranges::all_of(options,
                                   [](const OptionRow& row) {
-                                      return takesValue(row) == !row.valueNeeded.empty();
+                                      return takesValue(row) == !row.valueDescription.empty();
                                   }),
               "an option's value is described both for the usage and for its error, or not at all");
 
 // An option as the usage shows it: its name, then its value if it takes one.
 std::string shownOption(const OptionRow& row) {
-    return takesValue(row) ? std::string{row.name} + " " + std::string{row.valueShown}
+    return takesValue(row) ? std::string{row.name} + " " + std::string{row.valuePlaceholder}
                            : std::string{row.name};
 }
 
@@ -143,7 +143,7 @@ CommandLine::CommandLine(std::span<const std::string_view> args,
     // Every word is read, and only the first error, reading left to right, is kept. The help
     // option, then the version option, win over everything else wherever they are.
     std::optional<Action> action;
-    std::vector<Option> seen;
+    std::vector<Option> seenOptions;
     // Whether a value follows the word at `at`. A word starting with '-' is never a value: it is
     // read as an option of its own.
     const auto valueFollows = [args](std::size_t at) {
@@ -164,19 +164,20 @@ CommandLine::CommandLine(std::span<const std::string_view> args,
             }
             continue;
         }
-        if (contains(seen, row->option)) {
+        if (contains(seenOptions, row->option)) {
             fail("Option '" + std::string{word} + "' given twice");
             if (takesValue(*row) && valueFollows(i)) {
                 ++i; // its value is not an option of its own
             }
             continue;
         }
-        seen.push_back(row->option);
+        seenOptions.push_back(row->option);
 
         std::string_view value;
         if (takesValue(*row)) {
             if (!valueFollows(i)) {
-                fail("Option '" + std::string{word} + "' needs " + std::string{row->valueNeeded});
+                fail("Option '" + std::string{word} + "' needs " +
+                     std::string{row->valueDescription});
                 continue;
             }
             value = args[++i];
@@ -202,7 +203,7 @@ CommandLine::CommandLine(std::span<const std::string_view> args,
 
     if (action) {
         action_ = *action;
-    } else if (!error_.empty()) {
+    } else if (!errorMessage_.empty()) {
         action_ = Action::Error;
     }
 }
@@ -225,8 +226,8 @@ void CommandLine::readGraphicsApi(std::string_view name,
 }
 
 void CommandLine::fail(std::string message) {
-    if (error_.empty()) {
-        error_ = std::move(message);
+    if (errorMessage_.empty()) {
+        errorMessage_ = std::move(message);
     }
 }
 
@@ -246,8 +247,8 @@ WindowMode CommandLine::windowMode() const {
     return windowMode_;
 }
 
-const std::string& CommandLine::error() const {
-    return error_;
+const std::string& CommandLine::errorMessage() const {
+    return errorMessage_;
 }
 
 std::string CommandLine::usage(std::span<const GraphicsApi> availableGraphicsApis) {
@@ -261,8 +262,9 @@ std::string CommandLine::usage(std::span<const GraphicsApi> availableGraphicsApi
                        "\n"
                        "Options:\n";
     for (const OptionRow& row : options) {
-        const std::string shown = shownOption(row);
-        text += "  " + shown + std::string(helpColumn - shown.size(), ' ') + std::string{row.help};
+        const std::string shownOptionText = shownOption(row);
+        text += "  " + shownOptionText + std::string(helpColumn - shownOptionText.size(), ' ') +
+                std::string{row.helpLine};
         if (row.option == Option::Renderer) {
             text += " " + availableGraphicsApiNames(availableGraphicsApis);
         }
