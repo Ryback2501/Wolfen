@@ -18,7 +18,7 @@ class ScreenList {
     // Where the saved screen is in the list: the screen with its name and its position; failing
     // that, the first screen with its name. nullopt when its name is empty or no screen has it (the
     // caller then uses the primary screen).
-    [[nodiscard]] std::optional<std::size_t> indexOf(const Screen& saved) const;
+    [[nodiscard]] std::optional<std::size_t> indexOf(const Screen& savedScreen) const;
 
   private:
     std::vector<Screen> screens_;

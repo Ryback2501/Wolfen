@@ -44,7 +44,7 @@ class SdlWindow final : public Window {
     // Back to a window, where and how big it was before (where the system allows).
     void leaveFullscreen();
 
-    SDL_Window* window_{};
+    SDL_Window* sdlWindow_{};
     // For a window that opened in fullscreen: its size when it first leaves it.
     std::optional<Size> firstWindowedSize_;
     // Saved when F11 takes the window to fullscreen.
