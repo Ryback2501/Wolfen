@@ -34,12 +34,12 @@ namespace {
 
 // The usage text approved for #3, as changed by #4 (the --fullscreen line, and no keys) and #8 (the
 // --software line), with the given list of available graphics APIs.
-std::string usage(std::string_view available) {
+std::string usage(std::string_view availableNames) {
     return "Usage: wolfen [options]\n"
            "\n"
            "Options:\n"
            "  --renderer <name>  Draw with this renderer. Available on this computer: " +
-           std::string{available} +
+           std::string{availableNames} +
            "\n"
            "  --fullscreen       Start in borderless fullscreen.\n"
            "  --software         Draw with the CPU instead of the graphics card.\n"
@@ -92,11 +92,12 @@ void requirePrimaryScreenThenSaved(const std::optional<std::string>& settingsTex
 
 // A start with the given options in a window that ends with the given quit event: the screen the
 // window was on is saved in the game's folder, with no warning, exit 0.
-void requireScreenSavedOnQuit(Window::Event quit, std::initializer_list<std::string_view> args) {
+void requireScreenSavedOnQuit(Window::Event quitEvent,
+                              std::initializer_list<std::string_view> args) {
     const TempFolder folder;
     FakeGraphicsSystem graphicsSystem;
     graphicsSystem.screen = {.name = "HDMI-2", .position = Point{.x = 1920, .y = 0}};
-    graphicsSystem.events = {{}, {quit}};
+    graphicsSystem.events = {{}, {quitEvent}};
     const LauncherRun run{graphicsSystem, folder.path(), args};
     REQUIRE(folder.text("settings.ini") == "screen=HDMI-2\nscreen_position=1920,0\n");
     REQUIRE(run.err().empty());
@@ -133,10 +134,10 @@ void requireSettingsLeftAlone(std::initializer_list<std::string_view> args) {
 }
 
 // The window title with the given renderer text: "Wolfen vX.Y.Z (<renderer>)".
-std::string titleWith(std::string_view renderer) {
+std::string titleWith(std::string_view rendererDisplayName) {
     std::string title = versionLine();
     title.pop_back(); // the line's newline
-    return title + " (" + std::string{renderer} + ")";
+    return title + " (" + std::string{rendererDisplayName} + ")";
 }
 
 // The number of times the steps hold the given one.
@@ -343,10 +344,10 @@ TEST_CASE("Words as the system gives them: 'wolfen' alone plays with no renderer
 TEST_CASE("The usage lists --fullscreen right after --renderer, and mentions no keys",
           "[options][help][fullscreen]") {
     FakeGraphicsSystem graphicsSystem;
-    const std::string out = LauncherRun{graphicsSystem, {"--help"}}.out();
-    REQUIRE(out == usageHere);
-    REQUIRE(out.find("F11") == std::string::npos);
-    REQUIRE(out.find("Esc") == std::string::npos);
+    const std::string usageText = LauncherRun{graphicsSystem, {"--help"}}.out();
+    REQUIRE(usageText == usageHere);
+    REQUIRE(usageText.find("F11") == std::string::npos);
+    REQUIRE(usageText.find("Esc") == std::string::npos);
 }
 
 TEST_CASE("The --fullscreen option starts the game fullscreen, in any order with --renderer",
@@ -388,9 +389,9 @@ TEST_CASE("The --fullscreen option given twice", "[options][fullscreen]") {
 TEST_CASE("A normal quit saves the screen the window was on in the game's folder, in a window or "
           "fullscreen",
           "[settings]") {
-    for (const auto quit : {Window::Event::CloseRequested, Window::Event::EscapePressed}) {
-        requireScreenSavedOnQuit(quit, {});
-        requireScreenSavedOnQuit(quit, {"--fullscreen"});
+    for (const auto quitEvent : {Window::Event::CloseRequested, Window::Event::EscapePressed}) {
+        requireScreenSavedOnQuit(quitEvent, {});
+        requireScreenSavedOnQuit(quitEvent, {"--fullscreen"});
     }
 }
 
@@ -583,14 +584,14 @@ TEST_CASE(
     requireOptionError(graphicsSystem, {"--software", "--bogus"}, "Unknown option '--bogus'");
 
     FakeGraphicsSystem helpGraphicsSystem;
-    const LauncherRun help{helpGraphicsSystem, {"--help", "--software"}};
-    REQUIRE(help.out() == usageHere);
-    REQUIRE(help.exitCode() == 0);
+    const LauncherRun helpRun{helpGraphicsSystem, {"--help", "--software"}};
+    REQUIRE(helpRun.out() == usageHere);
+    REQUIRE(helpRun.exitCode() == 0);
 
     FakeGraphicsSystem versionGraphicsSystem;
-    const LauncherRun version{versionGraphicsSystem, {"--version", "--software"}};
-    REQUIRE(version.out() == versionLine());
-    REQUIRE(version.exitCode() == 0);
+    const LauncherRun versionRun{versionGraphicsSystem, {"--version", "--software"}};
+    REQUIRE(versionRun.out() == versionLine());
+    REQUIRE(versionRun.exitCode() == 0);
 }
 
 TEST_CASE("When no renderer can draw with the CPU: one message, no window left open, exit 1",

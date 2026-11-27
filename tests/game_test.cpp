@@ -227,9 +227,9 @@ TEST_CASE("Switching fullscreen keeps the title with the renderer's name", "[gam
 }
 
 TEST_CASE("In fullscreen, Esc and the close button still end the game", "[game][fullscreen]") {
-    for (const auto quit : {Window::Event::EscapePressed, Window::Event::CloseRequested}) {
+    for (const auto quitEvent : {Window::Event::EscapePressed, Window::Event::CloseRequested}) {
         FakeGraphicsSystem graphicsSystem;
-        graphicsSystem.events = {{}, {quit}, {}};
+        graphicsSystem.events = {{}, {quitEvent}, {}};
         const GameRun run{graphicsSystem, std::nullopt, WindowMode::Fullscreen};
         REQUIRE(graphicsSystem.record.windowSettings.windowMode == WindowMode::Fullscreen);
         REQUIRE(graphicsSystem.record.frameColours.size() == 1);
