@@ -24,7 +24,7 @@ class Game {
     // How a run of the game ended.
     enum class Outcome : std::uint8_t {
         Ended,                // played until the player closed it
-        ChosenRendererFailed, // the renderer it was given could not start; nothing on stderr
+        ChosenRendererFailed, // the graphics API it was given could not start; nothing on stderr
         CouldNotStart,        // it could not start; "Wolfen could not start: ..." was printed
         NoCpuRenderer,        // no renderer could start on a CPU device; nothing on stderr
     };
@@ -34,14 +34,15 @@ class Game {
     // "Wolfen" and the version, for example "Wolfen v1.2.3".
     [[nodiscard]] static std::string name();
 
-    // Runs the game with the given renderer, or the best one for this computer when none is given,
-    // in a window or in fullscreen, on the given screen (with no name: the primary one), until it
-    // ends; returns how it ended. The window is closed by then.
-    Outcome run(std::optional<engine::render::GraphicsApi> backend,
+    // Runs the game with the given graphics API, or the best one for this computer when none is
+    // given, in a window or in fullscreen, on the given screen (with no name: the primary one),
+    // until it ends; returns how it ended. The window is closed by then.
+    Outcome run(std::optional<engine::render::GraphicsApi> graphicsApi,
                 engine::platform::WindowMode windowMode, const engine::platform::Screen& screen);
-    // Runs the game in a window on the primary screen, with the best renderer for this computer.
+    // Runs the game in a window on the primary screen, with the best graphics API for this
+    // computer.
     Outcome run();
-    // Runs the game like run(), but drawing with the CPU: on the first renderer, in the order
+    // Runs the game like run(), but drawing with the CPU: on the first graphics API, in the order
     // Vulkan, Direct3D 11, Direct3D 12 and among those this computer supports, that starts on a
     // CPU device. Each try has a window of its own. Ends with NoCpuRenderer, no window left open,
     // when none does.

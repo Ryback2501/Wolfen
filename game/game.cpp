@@ -31,7 +31,7 @@ namespace {
 constexpr Size windowSize{.width = 1280, .height = 720};
 constexpr Colour background{.red = 0x64, .green = 0x95, .blue = 0xED, .alpha = 0xFF};
 
-// The renderers that can draw with the CPU, in the order runOnCpu() tries them.
+// The graphics APIs that can draw with the CPU, in the order runOnCpu() tries them.
 constexpr std::array cpuRenderers{GraphicsApi::Vulkan, GraphicsApi::Direct3D11,
                                   GraphicsApi::Direct3D12};
 
@@ -52,14 +52,14 @@ const Screen& Game::screenAtQuit() const {
     return screenAtQuit_;
 }
 
-Game::Outcome Game::run(std::optional<GraphicsApi> backend, WindowMode windowMode,
+Game::Outcome Game::run(std::optional<GraphicsApi> graphicsApi, WindowMode windowMode,
                         const Screen& screen) {
     const std::array<RendererStart, 1> starts{
-        [this, backend](Window& window) -> std::unique_ptr<Renderer> {
+        [this, graphicsApi](Window& window) -> std::unique_ptr<Renderer> {
             try {
-                return graphics_->startRenderer(window, backend);
+                return graphics_->startRenderer(window, graphicsApi);
             } catch (const StartupError&) {
-                if (!backend) {
+                if (!graphicsApi) {
                     throw; // the best renderer for this computer: the game could not start
                 }
                 return nullptr;
@@ -69,15 +69,15 @@ Game::Outcome Game::run(std::optional<GraphicsApi> backend, WindowMode windowMod
 }
 
 Game::Outcome Game::runOnCpu(WindowMode windowMode, const Screen& screen) {
-    const std::vector<GraphicsApi> available = graphics_->availableBackends();
+    const std::vector<GraphicsApi> available = graphics_->availableGraphicsApis();
     std::vector<RendererStart> starts;
-    for (const GraphicsApi backend : cpuRenderers) {
-        if (std::ranges::find(available, backend) == available.end()) {
+    for (const GraphicsApi graphicsApi : cpuRenderers) {
+        if (std::ranges::find(available, graphicsApi) == available.end()) {
             continue;
         }
-        starts.emplace_back([this, backend](Window& window) -> std::unique_ptr<Renderer> {
+        starts.emplace_back([this, graphicsApi](Window& window) -> std::unique_ptr<Renderer> {
             try {
-                return graphics_->startCpuRenderer(window, backend);
+                return graphics_->startCpuRenderer(window, graphicsApi);
             } catch (const StartupError&) {
                 return nullptr; // no CPU device for this one: the next one is tried
             }

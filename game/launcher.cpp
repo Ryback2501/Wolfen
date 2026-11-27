@@ -24,7 +24,7 @@ Launcher::Launcher(std::ostream& out, std::ostream& err, GraphicsSystem& graphic
     : out_{&out}, err_{&err}, graphics_{&graphics}, gameFolder_{std::move(gameFolder)} {}
 
 int Launcher::run(std::span<const std::string_view> args) {
-    const std::vector<GraphicsApi> available = graphics_->availableBackends();
+    const std::vector<GraphicsApi> available = graphics_->availableGraphicsApis();
     const CommandLine commandLine{args, available};
 
     switch (commandLine.action()) {
@@ -48,17 +48,17 @@ int Launcher::run(std::span<const std::string_view> args) {
     }
     const Screen screen = settingsFile ? settingsFile->screen() : Screen{};
 
-    const std::optional<GraphicsApi> backend = commandLine.backend();
+    const std::optional<GraphicsApi> graphicsApi = commandLine.graphicsApi();
     Game game{*out_, *err_, *graphics_};
     const Game::Outcome outcome = commandLine.isSoftwareAsked()
                                       ? game.runOnCpu(commandLine.windowMode(), screen)
-                                      : game.run(backend, commandLine.windowMode(), screen);
+                                      : game.run(graphicsApi, commandLine.windowMode(), screen);
     switch (outcome) {
     case Game::Outcome::Ended:
         saveScreen(settingsFile, game.screenAtQuit());
         return 0;
     case Game::Outcome::ChosenRendererFailed:
-        *err_ << "Renderer '" << CommandLine::optionName(backend.value_or(GraphicsApi::Other))
+        *err_ << "Renderer '" << CommandLine::optionName(graphicsApi.value_or(GraphicsApi::Other))
               << "' could not be started on this computer.\n";
         return 1;
     case Game::Outcome::NoCpuRenderer:

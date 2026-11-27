@@ -22,15 +22,15 @@ class BgfxRenderer final : public Renderer {
         Cpu,  // a CPU device (a software rasterizer) and nothing else
     };
 
-    // The backends bgfx supports on this computer, among the ones Wolfen names. Needs no window
-    // and does not start bgfx.
-    static std::vector<GraphicsApi> availableBackends();
+    // The graphics APIs bgfx supports on this computer, among the ones Wolfen names. Needs no
+    // window and does not start bgfx.
+    static std::vector<GraphicsApi> availableGraphicsApis();
 
-    // Starts the given backend and no other one; without one, lets bgfx pick the best backend
+    // Starts on the given graphics API and no other one; without one, lets bgfx pick the best one
     // for this computer, falling back to another if it fails. On Device::Cpu, a start on
     // anything but a CPU device counts as failed. Throws StartupError when it cannot start.
     explicit BgfxRenderer(const platform::Window& window,
-                          std::optional<GraphicsApi> backend = std::nullopt,
+                          std::optional<GraphicsApi> graphicsApi = std::nullopt,
                           Device device = Device::Best);
     BgfxRenderer(const BgfxRenderer&) = delete;
     BgfxRenderer& operator=(const BgfxRenderer&) = delete;

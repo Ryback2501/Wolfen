@@ -13,22 +13,22 @@
 
 namespace wolfen::engine::render {
 
-// Every renderer Wolfen names, one row each, so each renderer's details are written once. It holds
-// bgfx's types, so only engine/render/ may use it; RendererName gives everyone else the display
-// names without bgfx.
+// Every graphics API Wolfen names, one row each, so each graphics API's details are written once.
+// It holds bgfx's types, so only engine/render/ may use it; RendererName gives everyone else the
+// display names without bgfx.
 class RendererTable {
   public:
-    // One renderer Wolfen names: its backend, bgfx's renderer type for it, and its name as shown to
-    // people.
+    // One graphics API Wolfen names: its value, bgfx's renderer type for it, and its name as shown
+    // to people.
     struct Row {
-        GraphicsApi backend;
+        GraphicsApi graphicsApi;
         bgfx::RendererType::Enum bgfxType;
         std::string_view displayName;
     };
 
-    // The row for a backend, or null for GraphicsApi::Other.
-    static constexpr const Row* find(GraphicsApi backend) {
-        return findRow([backend](const Row& row) { return row.backend == backend; });
+    // The row for a graphics API, or null for GraphicsApi::Other.
+    static constexpr const Row* find(GraphicsApi graphicsApi) {
+        return findRow([graphicsApi](const Row& row) { return row.graphicsApi == graphicsApi; });
     }
 
     // The row for a bgfx renderer type, or null for a type Wolfen does not name.
@@ -38,19 +38,19 @@ class RendererTable {
 
   private:
     // In the order of GraphicsApi, one row for every value before Other.
-    static constexpr std::array<Row, 5> rows_{{{.backend = GraphicsApi::Vulkan,
+    static constexpr std::array<Row, 5> rows_{{{.graphicsApi = GraphicsApi::Vulkan,
                                                 .bgfxType = bgfx::RendererType::Vulkan,
                                                 .displayName = "Vulkan"},
-                                               {.backend = GraphicsApi::OpenGL,
+                                               {.graphicsApi = GraphicsApi::OpenGL,
                                                 .bgfxType = bgfx::RendererType::OpenGL,
                                                 .displayName = "OpenGL"},
-                                               {.backend = GraphicsApi::Metal,
+                                               {.graphicsApi = GraphicsApi::Metal,
                                                 .bgfxType = bgfx::RendererType::Metal,
                                                 .displayName = "Metal"},
-                                               {.backend = GraphicsApi::Direct3D11,
+                                               {.graphicsApi = GraphicsApi::Direct3D11,
                                                 .bgfxType = bgfx::RendererType::Direct3D11,
                                                 .displayName = "Direct3D 11"},
-                                               {.backend = GraphicsApi::Direct3D12,
+                                               {.graphicsApi = GraphicsApi::Direct3D12,
                                                 .bgfxType = bgfx::RendererType::Direct3D12,
                                                 .displayName = "Direct3D 12"}}};
 
@@ -73,7 +73,7 @@ class RendererTable {
                 return false;
             }
             for (std::size_t i = 0; i < rows_.size(); ++i) {
-                if (static_cast<std::size_t>(rows_.at(i).backend) != i) {
+                if (static_cast<std::size_t>(rows_.at(i).graphicsApi) != i) {
                     return false;
                 }
             }

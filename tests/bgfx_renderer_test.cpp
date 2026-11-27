@@ -26,16 +26,16 @@ TEST_CASE("The renderer refuses a window without a native handle, before startin
 
 TEST_CASE("Outside Windows, Direct3D is never reported as available", "[renderer]") {
     // Only asks bgfx what it supports: no window, no GPU, bgfx is not started.
-    const std::vector<GraphicsApi> backends = BgfxRenderer::availableBackends();
+    const std::vector<GraphicsApi> graphicsApis = BgfxRenderer::availableGraphicsApis();
 #ifdef _WIN32
     SUCCEED("Direct3D belongs on Windows");
 #else
-    REQUIRE(std::ranges::find(backends, GraphicsApi::Direct3D11) == backends.end());
-    REQUIRE(std::ranges::find(backends, GraphicsApi::Direct3D12) == backends.end());
+    REQUIRE(std::ranges::find(graphicsApis, GraphicsApi::Direct3D11) == graphicsApis.end());
+    REQUIRE(std::ranges::find(graphicsApis, GraphicsApi::Direct3D12) == graphicsApis.end());
 #endif
 }
 
 TEST_CASE("bgfx reports at least one renderer Wolfen can name", "[renderer]") {
     // Every platform Wolfen builds for has at least Vulkan, OpenGL, Metal or Direct3D compiled in.
-    REQUIRE_FALSE(BgfxRenderer::availableBackends().empty());
+    REQUIRE_FALSE(BgfxRenderer::availableGraphicsApis().empty());
 }

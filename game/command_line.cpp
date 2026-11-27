@@ -80,16 +80,16 @@ std::string shownOption(const OptionRow& row) {
 
 struct NamedRenderer {
     std::string_view name;
-    GraphicsApi backend;
+    GraphicsApi graphicsApi;
 };
 
-// Every renderer name Wolfen knows, in the fixed order used wherever a list is printed.
+// Every graphics API name Wolfen knows, in the fixed order used wherever a list is printed.
 constexpr std::array<NamedRenderer, 5> knownRenderers{
-    {{.name = "vulkan", .backend = GraphicsApi::Vulkan},
-     {.name = "opengl", .backend = GraphicsApi::OpenGL},
-     {.name = "metal", .backend = GraphicsApi::Metal},
-     {.name = "d3d11", .backend = GraphicsApi::Direct3D11},
-     {.name = "d3d12", .backend = GraphicsApi::Direct3D12}}};
+    {{.name = "vulkan", .graphicsApi = GraphicsApi::Vulkan},
+     {.name = "opengl", .graphicsApi = GraphicsApi::OpenGL},
+     {.name = "metal", .graphicsApi = GraphicsApi::Metal},
+     {.name = "d3d11", .graphicsApi = GraphicsApi::Direct3D11},
+     {.name = "d3d12", .graphicsApi = GraphicsApi::Direct3D12}}};
 
 // The first row of the table that `matches` accepts, or null. A plain loop returning a pointer, so
 // the code does not depend on whether the library's array iterators are pointers.
@@ -119,11 +119,11 @@ bool contains(const List& list, const std::ranges::range_value_t<List>& item) {
     return std::ranges::find(list, item) != std::ranges::end(list);
 }
 
-// The available renderers, by name, in the fixed order: "vulkan, opengl", or "(none)".
+// The available graphics APIs, by name, in the fixed order: "vulkan, opengl", or "(none)".
 std::string availableList(std::span<const GraphicsApi> available) {
     std::string list;
     for (const auto& named : knownRenderers) {
-        if (contains(available, named.backend)) {
+        if (contains(available, named.graphicsApi)) {
             list += list.empty() ? "" : ", ";
             list += named.name;
         }
@@ -208,7 +208,7 @@ CommandLine::CommandLine(std::span<const std::string_view> args,
 void CommandLine::readRenderer(std::string_view name, std::span<const GraphicsApi> available) {
     const NamedRenderer* named = firstRow(
         knownRenderers, [name](const NamedRenderer& candidate) { return candidate.name == name; });
-    if (named == nullptr || !contains(available, named->backend)) {
+    if (named == nullptr || !contains(available, named->graphicsApi)) {
         const std::string problem =
             named == nullptr
                 ? "Unknown renderer '" + std::string{name} + "'"
@@ -216,7 +216,7 @@ void CommandLine::readRenderer(std::string_view name, std::span<const GraphicsAp
         fail(problem + ". Available: " + availableList(available));
         return;
     }
-    backend_ = named->backend;
+    graphicsApi_ = named->graphicsApi;
 }
 
 void CommandLine::fail(std::string message) {
@@ -229,8 +229,8 @@ CommandLine::Action CommandLine::action() const {
     return action_;
 }
 
-std::optional<GraphicsApi> CommandLine::backend() const {
-    return backend_;
+std::optional<GraphicsApi> CommandLine::graphicsApi() const {
+    return graphicsApi_;
 }
 
 bool CommandLine::isSoftwareAsked() const {
@@ -270,10 +270,10 @@ std::string CommandLine::hint() {
     return "Run 'wolfen " + std::string{helpRow.name} + "' to see the available options.";
 }
 
-std::string_view CommandLine::optionName(GraphicsApi backend) {
+std::string_view CommandLine::optionName(GraphicsApi graphicsApi) {
     const NamedRenderer* named =
-        firstRow(knownRenderers, [backend](const NamedRenderer& candidate) {
-            return candidate.backend == backend;
+        firstRow(knownRenderers, [graphicsApi](const NamedRenderer& candidate) {
+            return candidate.graphicsApi == graphicsApi;
         });
     return named == nullptr ? std::string_view{} : named->name;
 }

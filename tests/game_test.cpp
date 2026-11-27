@@ -151,11 +151,11 @@ TEST_CASE("A hidden window can still be closed", "[game]") {
 }
 
 TEST_CASE("The game starts the renderer it is given, after the start line", "[game][renderer]") {
-    for (const auto backend : {GraphicsApi::Vulkan, GraphicsApi::OpenGL}) {
+    for (const auto graphicsApi : {GraphicsApi::Vulkan, GraphicsApi::OpenGL}) {
         FakeGraphicsSystem graphics;
-        const GameRun run{graphics, backend};
+        const GameRun run{graphics, graphicsApi};
         REQUIRE(graphics.record.outputWhenWindowOpened == versionLine());
-        REQUIRE(graphics.record.requestedBackend == backend);
+        REQUIRE(graphics.record.requestedGraphicsApi == graphicsApi);
         REQUIRE(run.outcome() == Game::Outcome::Ended);
     }
 }
@@ -165,7 +165,7 @@ TEST_CASE("Given no renderer, the game lets the engine choose", "[game][renderer
     const GameRun run{graphics, std::nullopt};
     REQUIRE(graphics.record.steps.size() >= 2);
     REQUIRE(graphics.record.steps.at(1) == "start renderer");
-    REQUIRE_FALSE(graphics.record.requestedBackend.has_value());
+    REQUIRE_FALSE(graphics.record.requestedGraphicsApi.has_value());
     REQUIRE(run.outcome() == Game::Outcome::Ended);
 }
 
@@ -189,15 +189,15 @@ TEST_CASE("Given no window mode, the game opens a window, not fullscreen", "[gam
 
 TEST_CASE("Asked for fullscreen, the game opens its window fullscreen, 1280x720 for later",
           "[game][fullscreen]") {
-    for (const auto backend :
+    for (const auto graphicsApi :
          {std::optional<GraphicsApi>{}, std::optional<GraphicsApi>{GraphicsApi::OpenGL}}) {
         FakeGraphicsSystem graphics;
-        const GameRun run{graphics, backend, WindowMode::Fullscreen};
+        const GameRun run{graphics, graphicsApi, WindowMode::Fullscreen};
         const auto& settings = graphics.record.windowSettings;
         REQUIRE(settings.mode == WindowMode::Fullscreen);
         // The size the window gets when it first leaves fullscreen.
         REQUIRE(settings.size == Size{.width = 1280, .height = 720});
-        REQUIRE(graphics.record.requestedBackend == backend);
+        REQUIRE(graphics.record.requestedGraphicsApi == graphicsApi);
         REQUIRE(run.outcome() == Game::Outcome::Ended);
     }
 }
