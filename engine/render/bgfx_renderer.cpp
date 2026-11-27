@@ -1,8 +1,8 @@
 #include "render/bgfx_renderer.hpp"
 
 #include "core/startup_error.hpp"
+#include "render/graphics_api_table.hpp"
 #include "render/renderer_name.hpp"
-#include "render/renderer_table.hpp"
 
 #include <bgfx/bgfx.h>
 
@@ -21,13 +21,13 @@ constexpr std::uint32_t resetFlags = BGFX_RESET_VSYNC; // one frame per screen r
 
 // The graphics API for a bgfx renderer type; GraphicsApi::Other for a type Wolfen does not name.
 GraphicsApi graphicsApiOf(bgfx::RendererType::Enum type) {
-    const RendererTable::Row* row = RendererTable::find(type);
+    const GraphicsApiTable::Row* row = GraphicsApiTable::row(type);
     return row == nullptr ? GraphicsApi::Other : row->graphicsApi;
 }
 
 // The bgfx renderer type for a graphics API; for GraphicsApi::Other, "let bgfx choose".
 bgfx::RendererType::Enum bgfxTypeOf(GraphicsApi graphicsApi) {
-    const RendererTable::Row* row = RendererTable::find(graphicsApi);
+    const GraphicsApiTable::Row* row = GraphicsApiTable::row(graphicsApi);
     return row == nullptr ? bgfx::RendererType::Count : row->bgfxType;
 }
 

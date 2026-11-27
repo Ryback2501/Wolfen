@@ -1,5 +1,5 @@
-#ifndef WOLFEN_ENGINE_RENDER_RENDERER_TABLE_HPP
-#define WOLFEN_ENGINE_RENDER_RENDERER_TABLE_HPP
+#ifndef WOLFEN_ENGINE_RENDER_GRAPHICS_API_TABLE_HPP
+#define WOLFEN_ENGINE_RENDER_GRAPHICS_API_TABLE_HPP
 
 // Included only by .cpp files in render/: it names bgfx types, and only render/ may use bgfx.
 
@@ -16,7 +16,7 @@ namespace wolfen::engine::render {
 // Every graphics API Wolfen names, one row each, so each graphics API's details are written once.
 // It holds bgfx's types, so only engine/render/ may use it; RendererName gives everyone else the
 // display names without bgfx.
-class RendererTable {
+class GraphicsApiTable {
   public:
     // One graphics API Wolfen names: its value, bgfx's renderer type for it, and its name as shown
     // to people.
@@ -27,13 +27,13 @@ class RendererTable {
     };
 
     // The row for a graphics API, or null for GraphicsApi::Other.
-    static constexpr const Row* find(GraphicsApi graphicsApi) {
-        return findRow([graphicsApi](const Row& row) { return row.graphicsApi == graphicsApi; });
+    static constexpr const Row* row(GraphicsApi graphicsApi) {
+        return firstRow([graphicsApi](const Row& row) { return row.graphicsApi == graphicsApi; });
     }
 
     // The row for a bgfx renderer type, or null for a type Wolfen does not name.
-    static constexpr const Row* find(bgfx::RendererType::Enum bgfxType) {
-        return findRow([bgfxType](const Row& row) { return row.bgfxType == bgfxType; });
+    static constexpr const Row* row(bgfx::RendererType::Enum bgfxType) {
+        return firstRow([bgfxType](const Row& row) { return row.bgfxType == bgfxType; });
     }
 
   private:
@@ -56,7 +56,7 @@ class RendererTable {
 
     // The first row that `matches` accepts, or null. A plain loop returning a pointer, so the code
     // does not depend on whether the library's array iterators are pointers.
-    template <typename Matches> static constexpr const Row* findRow(const Matches& matches) {
+    template <typename Matches> static constexpr const Row* firstRow(const Matches& matches) {
         for (const Row& row : rows_) {
             if (matches(row)) {
                 return &row;
@@ -79,10 +79,10 @@ class RendererTable {
             }
             return true;
         }(),
-        "RendererTable needs one row for every GraphicsApi value before Other, in GraphicsApi's "
-        "order (engine/render/renderer_table.hpp)");
+        "GraphicsApiTable needs one row for every GraphicsApi value before Other, in GraphicsApi's "
+        "order (engine/render/graphics_api_table.hpp)");
 };
 
 } // namespace wolfen::engine::render
 
-#endif // WOLFEN_ENGINE_RENDER_RENDERER_TABLE_HPP
+#endif // WOLFEN_ENGINE_RENDER_GRAPHICS_API_TABLE_HPP

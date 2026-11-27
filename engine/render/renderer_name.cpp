@@ -1,11 +1,11 @@
 #include "render/renderer_name.hpp"
 
-#include "render/renderer_table.hpp"
+#include "render/graphics_api_table.hpp"
 
 namespace wolfen::engine::render {
 
 std::string_view RendererName::display(GraphicsApi graphicsApi, std::string_view engineName) {
-    const RendererTable::Row* row = RendererTable::find(graphicsApi);
+    const GraphicsApiTable::Row* row = GraphicsApiTable::row(graphicsApi);
     return row == nullptr ? engineName : row->displayName;
 }
 
