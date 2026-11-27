@@ -24,7 +24,7 @@ class CommandLine {
                 std::span<const engine::render::GraphicsApi> availableGraphicsApis);
 
     [[nodiscard]] Action action() const;
-    // For Run: the graphics API asked for with --renderer, if any; never with --software.
+    // For Run: the graphics API asked for with --graphics-api, if any; never with --software.
     [[nodiscard]] std::optional<engine::render::GraphicsApi> graphicsApi() const;
     // For Run: Fullscreen when --fullscreen was given, Windowed otherwise.
     [[nodiscard]] engine::platform::WindowMode windowMode() const;
@@ -39,11 +39,11 @@ class CommandLine {
     usage(std::span<const engine::render::GraphicsApi> availableGraphicsApis);
     // The one line shown after an option error, pointing to --help.
     [[nodiscard]] static std::string hint();
-    // The name of a graphics API as written in --renderer, for example "vulkan".
+    // The name of a graphics API as written in --graphics-api, for example "vulkan".
     [[nodiscard]] static std::string_view graphicsApiName(engine::render::GraphicsApi graphicsApi);
 
   private:
-    // Reads the value of --renderer: the graphics API it names, if Wolfen knows it and this
+    // Reads the value of --graphics-api: the graphics API it names, if Wolfen knows it and this
     // computer supports it; otherwise records the error.
     void readGraphicsApi(std::string_view name,
                          std::span<const engine::render::GraphicsApi> availableGraphicsApis);
