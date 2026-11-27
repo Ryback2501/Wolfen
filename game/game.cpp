@@ -60,7 +60,7 @@ Game::Outcome Game::run(std::optional<GraphicsApi> graphicsApi, WindowMode windo
                 return graphicsSystem_->startRenderer(window, graphicsApi);
             } catch (const StartupError&) {
                 if (!graphicsApi) {
-                    throw; // the best renderer for this computer: the game could not start
+                    throw; // the best graphics API for this computer: the game could not start
                 }
                 return nullptr;
             }

@@ -28,7 +28,7 @@ class CommandLine {
     [[nodiscard]] std::optional<engine::render::GraphicsApi> graphicsApi() const;
     // For Run: Fullscreen when --fullscreen was given, Windowed otherwise.
     [[nodiscard]] engine::platform::WindowMode windowMode() const;
-    // For Run: whether --software was given, so the game draws with the CPU on a renderer it
+    // For Run: whether --software was given, so the game draws with the CPU on a graphics API it
     // picks itself.
     [[nodiscard]] bool isSoftwareAsked() const;
     // For Error: the message to show, without the usage.
