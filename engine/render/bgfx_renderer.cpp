@@ -1,8 +1,8 @@
 #include "render/bgfx_renderer.hpp"
 
 #include "core/startup_error.hpp"
+#include "render/graphics_api_name.hpp"
 #include "render/graphics_api_table.hpp"
-#include "render/renderer_name.hpp"
 
 #include <bgfx/bgfx.h>
 
@@ -146,7 +146,7 @@ BgfxRenderer::BgfxRenderer(const platform::Window& window, std::optional<Graphic
     // bgfx down here before the window it draws into goes away.
     try {
         const bgfx::RendererType::Enum type = bgfx::getRendererType();
-        name_ = RendererName::display(graphicsApiOf(type), bgfx::getRendererName(type));
+        name_ = GraphicsApiName::displayName(graphicsApiOf(type), bgfx::getRendererName(type));
         drawsWithCpu_ = drawsOnCpu(*bgfx::getCaps());
         if (device == Device::Cpu && !drawsWithCpu_) {
             // bgfx falls back to a graphics card when it finds no CPU device.

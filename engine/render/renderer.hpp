@@ -18,7 +18,7 @@ class Renderer {
     Renderer& operator=(Renderer&&) = delete;
     virtual ~Renderer() = default;
 
-    // The name to show people, for example "Vulkan" (see RendererName).
+    // The name to show people, for example "Vulkan" (see GraphicsApiName).
     [[nodiscard]] virtual std::string_view name() const = 0;
     // Whether it draws on a CPU device (a software rasterizer) instead of a graphics card, as far
     // as the rendering library can tell.

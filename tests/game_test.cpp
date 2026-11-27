@@ -4,7 +4,7 @@
 #include "game.hpp"
 #include "platform/window.hpp"
 #include "platform/window_mode.hpp"
-#include "render/renderer_name.hpp"
+#include "render/graphics_api_name.hpp"
 #include "runs.hpp"
 
 #include <catch2/catch_test_macros.hpp>
@@ -19,7 +19,7 @@ using wolfen::engine::Version;
 using wolfen::engine::platform::Window;
 using wolfen::engine::platform::WindowMode;
 using wolfen::engine::render::GraphicsApi;
-using wolfen::engine::render::RendererName;
+using wolfen::engine::render::GraphicsApiName;
 using wolfen::game::Game;
 using wolfen::tests::FakeGraphicsSystem;
 using wolfen::tests::GameRun;
@@ -117,15 +117,15 @@ TEST_CASE("A renderer that cannot start: message on stderr, the game could not s
 }
 
 TEST_CASE("Renderer display names", "[renderer]") {
-    REQUIRE(RendererName::display(GraphicsApi::Vulkan, "Vulkan") == "Vulkan");
-    REQUIRE(RendererName::display(GraphicsApi::OpenGL, "OpenGL 2.1") == "OpenGL");
-    REQUIRE(RendererName::display(GraphicsApi::Metal, "Metal") == "Metal");
-    REQUIRE(RendererName::display(GraphicsApi::Direct3D11, "Direct3D 11") == "Direct3D 11");
-    REQUIRE(RendererName::display(GraphicsApi::Direct3D12, "Direct3D 12") == "Direct3D 12");
+    REQUIRE(GraphicsApiName::displayName(GraphicsApi::Vulkan, "Vulkan") == "Vulkan");
+    REQUIRE(GraphicsApiName::displayName(GraphicsApi::OpenGL, "OpenGL 2.1") == "OpenGL");
+    REQUIRE(GraphicsApiName::displayName(GraphicsApi::Metal, "Metal") == "Metal");
+    REQUIRE(GraphicsApiName::displayName(GraphicsApi::Direct3D11, "Direct3D 11") == "Direct3D 11");
+    REQUIRE(GraphicsApiName::displayName(GraphicsApi::Direct3D12, "Direct3D 12") == "Direct3D 12");
 }
 
 TEST_CASE("Any other renderer shows the rendering library's own name", "[renderer]") {
-    REQUIRE(RendererName::display(GraphicsApi::Other, "Noop") == "Noop");
+    REQUIRE(GraphicsApiName::displayName(GraphicsApi::Other, "Noop") == "Noop");
 }
 
 TEST_CASE("A hidden window is not drawn; the game sleeps until it is shown again", "[game]") {

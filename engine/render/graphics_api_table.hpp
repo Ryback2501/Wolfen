@@ -14,7 +14,7 @@
 namespace wolfen::engine::render {
 
 // Every graphics API Wolfen names, one row each, so each graphics API's details are written once.
-// It holds bgfx's types, so only engine/render/ may use it; RendererName gives everyone else the
+// It holds bgfx's types, so only engine/render/ may use it; GraphicsApiName gives everyone else the
 // display names without bgfx.
 class GraphicsApiTable {
   public:

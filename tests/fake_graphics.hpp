@@ -7,7 +7,7 @@
 #include "core/startup_error.hpp"
 #include "platform/screen.hpp"
 #include "platform/window.hpp"
-#include "render/renderer_name.hpp"
+#include "render/graphics_api_name.hpp"
 
 #include <algorithm>
 #include <deque>
@@ -183,7 +183,8 @@ class FakeGraphicsSystem final : public engine::app::GraphicsSystem {
             throw engine::StartupError{"no CPU device"};
         }
         return std::make_unique<FakeRenderer>(
-            record, std::string{engine::render::RendererName::display(graphicsApi, "")}, true);
+            record, std::string{engine::render::GraphicsApiName::displayName(graphicsApi, "")},
+            true);
     }
 };
 
