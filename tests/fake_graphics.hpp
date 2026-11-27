@@ -7,7 +7,7 @@
 #include "core/startup_error.hpp"
 #include "platform/screen.hpp"
 #include "platform/window.hpp"
-#include "render/renderer_name.hpp"
+#include "render/graphics_api_name.hpp"
 
 #include <algorithm>
 #include <deque>
@@ -25,12 +25,14 @@ struct GraphicsRecord {
     std::vector<std::string> steps; // "open window", "start renderer", "close renderer", ...
     engine::platform::Window::Settings windowSettings; // as asked for by the last openWindow()
     std::vector<std::string> titles;
-    std::vector<engine::Colour> frames;
-    std::vector<engine::Size> resizes;
-    std::optional<engine::render::Backend> requestedBackend; // as asked of the last startRenderer()
-    std::vector<engine::render::Backend> cpuTries; // every startCpuRenderer() call, in order
-    int waits{};                        // how many times the game slept until the window had events
-    int fullscreenSwitches{};           // how many times the game switched fullscreen on or off
+    std::vector<engine::Colour> frameColours;
+    std::vector<engine::Size> resizedPixelSizes;
+    // As asked of the last startRenderer().
+    std::optional<engine::render::GraphicsApi> requestedGraphicsApi;
+    // Every startCpuRenderer() call, in order.
+    std::vector<engine::render::GraphicsApi> triedCpuGraphicsApis;
+    int waitCount{};                    // how many times the game slept until the window had events
+    int fullscreenSwitchCount{};        // how many times the game switched fullscreen on or off
     std::string outputWhenWindowOpened; // what the game had printed when it opened the window
 };
 
@@ -66,7 +68,7 @@ class FakeWindow final : public engine::platform::Window {
         return batch;
     }
     std::vector<engine::platform::Window::Event> waitEvents() override {
-        ++record_->waits;
+        ++record_->waitCount;
         return pollEvents();
     }
     [[nodiscard]] engine::Size pixelSize() const override {
@@ -76,7 +78,7 @@ class FakeWindow final : public engine::platform::Window {
         record_->titles.emplace_back(title);
     }
     void switchFullscreen() override {
-        ++record_->fullscreenSwitches;
+        ++record_->fullscreenSwitchCount;
     }
     [[nodiscard]] engine::platform::Screen screen() const override {
         return screen_;
@@ -96,8 +98,8 @@ class FakeWindow final : public engine::platform::Window {
 // A renderer that draws nothing and records every frame.
 class FakeRenderer final : public engine::render::Renderer {
   public:
-    FakeRenderer(GraphicsRecord& record, std::string name, bool drawsWithCpu)
-        : record_{&record}, name_{std::move(name)}, drawsWithCpu_{drawsWithCpu} {}
+    FakeRenderer(GraphicsRecord& record, std::string displayName, bool drawsWithCpu)
+        : record_{&record}, displayName_{std::move(displayName)}, drawsWithCpu_{drawsWithCpu} {}
     FakeRenderer(const FakeRenderer&) = delete;
     FakeRenderer& operator=(const FakeRenderer&) = delete;
     FakeRenderer(FakeRenderer&&) = delete;
@@ -106,22 +108,22 @@ class FakeRenderer final : public engine::render::Renderer {
         record_->steps.emplace_back("close renderer");
     }
 
-    [[nodiscard]] std::string_view name() const override {
-        return name_;
+    [[nodiscard]] std::string_view displayName() const override {
+        return displayName_;
     }
     [[nodiscard]] bool drawsWithCpu() const override {
         return drawsWithCpu_;
     }
     void resize(engine::Size pixelSize) override {
-        record_->resizes.push_back(pixelSize);
+        record_->resizedPixelSizes.push_back(pixelSize);
     }
-    void drawFrame(engine::Colour background) override {
-        record_->frames.push_back(background);
+    void drawFrame(engine::Colour backgroundColour) override {
+        record_->frameColours.push_back(backgroundColour);
     }
 
   private:
     GraphicsRecord* record_;
-    std::string name_;
+    std::string displayName_;
     bool drawsWithCpu_;
 };
 
@@ -132,19 +134,19 @@ class FakeGraphicsSystem final : public engine::app::GraphicsSystem {
     std::deque<std::vector<engine::platform::Window::Event>> events; // one batch per poll
     engine::Size pixelSize{.width = 1280, .height = 720};            // when the window opens
     engine::Size sizeAfterResize{.width = 1280, .height = 720}; // from the first Resized event on
-    std::string rendererName{"Fake"};
+    std::string rendererDisplayName{"Fake"};
     bool rendererDrawsWithCpu{false}; // whether startRenderer() ends up on a CPU device
-    // The renderers that can start on a CPU device; startCpuRenderer() fails for the others.
-    std::vector<engine::render::Backend> cpuBackends;
+    // The graphics APIs that can start on a CPU device; startCpuRenderer() fails for the others.
+    std::vector<engine::render::GraphicsApi> cpuGraphicsApis;
     // The screen the window is on, as the system knows it.
     engine::platform::Screen screen{.name = "Fake screen", .position = std::nullopt};
     std::optional<std::string> windowFailure;   // when set, openWindow() fails with it
     std::optional<std::string> rendererFailure; // when set, startRenderer() fails with it
-    std::vector<engine::render::Backend> available{engine::render::Backend::Vulkan,
-                                                   engine::render::Backend::OpenGL};
+    std::vector<engine::render::GraphicsApi> available{engine::render::GraphicsApi::Vulkan,
+                                                       engine::render::GraphicsApi::OpenGL};
     const std::ostringstream* watchedOutput{}; // when set, recorded when the window opens
 
-    [[nodiscard]] std::vector<engine::render::Backend> availableBackends() const override {
+    [[nodiscard]] std::vector<engine::render::GraphicsApi> availableGraphicsApis() const override {
         return available;
     }
 
@@ -164,25 +166,26 @@ class FakeGraphicsSystem final : public engine::app::GraphicsSystem {
 
     std::unique_ptr<engine::render::Renderer>
     startRenderer(engine::platform::Window& /*window*/,
-                  std::optional<engine::render::Backend> backend) override {
-        record.requestedBackend = backend;
+                  std::optional<engine::render::GraphicsApi> graphicsApi) override {
+        record.requestedGraphicsApi = graphicsApi;
         record.steps.emplace_back("start renderer");
         if (rendererFailure) {
             throw engine::StartupError{*rendererFailure};
         }
-        return std::make_unique<FakeRenderer>(record, rendererName, rendererDrawsWithCpu);
+        return std::make_unique<FakeRenderer>(record, rendererDisplayName, rendererDrawsWithCpu);
     }
 
     std::unique_ptr<engine::render::Renderer>
     startCpuRenderer(engine::platform::Window& /*window*/,
-                     engine::render::Backend backend) override {
+                     engine::render::GraphicsApi graphicsApi) override {
         record.steps.emplace_back("start CPU renderer");
-        record.cpuTries.push_back(backend);
-        if (std::ranges::find(cpuBackends, backend) == cpuBackends.end()) {
+        record.triedCpuGraphicsApis.push_back(graphicsApi);
+        if (std::ranges::find(cpuGraphicsApis, graphicsApi) == cpuGraphicsApis.end()) {
             throw engine::StartupError{"no CPU device"};
         }
         return std::make_unique<FakeRenderer>(
-            record, std::string{engine::render::RendererName::display(backend, "")}, true);
+            record, std::string{engine::render::GraphicsApiName::displayName(graphicsApi, "")},
+            true);
     }
 };
 

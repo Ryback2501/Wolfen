@@ -20,17 +20,17 @@ using engine::platform::Screen;
 namespace {
 
 // The starts of the lines that hold the screen's name and its position.
-constexpr std::string_view screenKey = "screen=";
-constexpr std::string_view positionKey = "screen_position=";
+constexpr std::string_view screenNameKey = "screen=";
+constexpr std::string_view screenPositionKey = "screen_position=";
 
 // The text without spaces or CRs at either end.
 std::string_view withoutSpacesAtTheEnds(std::string_view text) {
-    constexpr std::string_view spaces = " \r";
-    const std::size_t first = text.find_first_not_of(spaces);
+    constexpr std::string_view trimmedCharacters = " \r";
+    const std::size_t first = text.find_first_not_of(trimmedCharacters);
     if (first == std::string_view::npos) {
         return {};
     }
-    const std::size_t last = text.find_last_not_of(spaces);
+    const std::size_t last = text.find_last_not_of(trimmedCharacters);
     return text.substr(first, last - first + 1);
 }
 
@@ -38,12 +38,12 @@ std::string_view withoutSpacesAtTheEnds(std::string_view text) {
 // anything else, or for a number too large for an int.
 std::optional<int> wholeNumber(std::string_view text) {
     text = withoutSpacesAtTheEnds(text);
-    const std::string digits{text}; // from_chars reads characters between two plain pointers
-    const char* begin = digits.c_str();
-    const char* end = std::next(begin, static_cast<std::ptrdiff_t>(digits.size()));
+    const std::string numberText{text}; // from_chars reads characters between two plain pointers
+    const char* begin = numberText.c_str();
+    const char* end = std::next(begin, static_cast<std::ptrdiff_t>(numberText.size()));
     int number = 0;
-    const auto [stop, error] = std::from_chars(begin, end, number);
-    if (error != std::errc{} || stop != end) {
+    const auto [parsedEnd, errorCode] = std::from_chars(begin, end, number);
+    if (errorCode != std::errc{} || parsedEnd != end) {
         return std::nullopt;
     }
     return number;
@@ -51,12 +51,12 @@ std::optional<int> wholeNumber(std::string_view text) {
 
 // The position written as "<x>,<y>", or nullopt when it is anything else.
 std::optional<Point> positionFrom(std::string_view text) {
-    const std::size_t comma = text.find(',');
-    if (comma == std::string_view::npos) {
+    const std::size_t commaIndex = text.find(',');
+    if (commaIndex == std::string_view::npos) {
         return std::nullopt;
     }
-    const std::optional<int> x = wholeNumber(text.substr(0, comma));
-    const std::optional<int> y = wholeNumber(text.substr(comma + 1));
+    const std::optional<int> x = wholeNumber(text.substr(0, commaIndex));
+    const std::optional<int> y = wholeNumber(text.substr(commaIndex + 1));
     if (!x || !y) {
         return std::nullopt;
     }
@@ -84,11 +84,11 @@ Screen SettingsFile::screen() const {
     bool hasPositionLine = false;
     std::string line;
     while (std::getline(file, line)) {
-        if (!hasNameLine && line.starts_with(screenKey)) {
-            screen.name = valueAfter(screenKey, line);
+        if (!hasNameLine && line.starts_with(screenNameKey)) {
+            screen.name = valueAfter(screenNameKey, line);
             hasNameLine = true;
-        } else if (!hasPositionLine && line.starts_with(positionKey)) {
-            screen.position = positionFrom(valueAfter(positionKey, line));
+        } else if (!hasPositionLine && line.starts_with(screenPositionKey)) {
+            screen.position = positionFrom(valueAfter(screenPositionKey, line));
             hasPositionLine = true;
         }
     }
@@ -97,7 +97,7 @@ Screen SettingsFile::screen() const {
 
 bool SettingsFile::save(const Screen& screen) const {
     std::ofstream file{path_}; // replaces what was there
-    file << screenKey << screen.name << '\n' << positionKey;
+    file << screenNameKey << screen.name << '\n' << screenPositionKey;
     if (screen.position) {
         file << screen.position->x << ',' << screen.position->y;
     }

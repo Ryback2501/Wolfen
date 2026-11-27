@@ -77,28 +77,29 @@ Screen screenOf(SDL_DisplayID display) {
 }
 
 // The connected screen that matches the saved one (see ScreenList), or the primary screen.
-SDL_DisplayID displayFor(const Screen& saved) {
-    int count = 0;
-    const std::unique_ptr<SDL_DisplayID, decltype(&SDL_free)> displays{SDL_GetDisplays(&count),
-                                                                       &SDL_free};
+SDL_DisplayID displayFor(const Screen& savedScreen) {
+    int displayCount = 0;
+    const std::unique_ptr<SDL_DisplayID, decltype(&SDL_free)> displays{
+        SDL_GetDisplays(&displayCount), &SDL_free};
     if (displays == nullptr) {
         return SDL_GetPrimaryDisplay();
     }
-    const std::span<const SDL_DisplayID> connected{displays.get(), static_cast<std::size_t>(count)};
+    const std::span<const SDL_DisplayID> connectedDisplays{displays.get(),
+                                                           static_cast<std::size_t>(displayCount)};
     std::vector<Screen> screens;
-    screens.reserve(connected.size());
-    for (const SDL_DisplayID display : connected) {
+    screens.reserve(connectedDisplays.size());
+    for (const SDL_DisplayID display : connectedDisplays) {
         screens.push_back(screenOf(display));
     }
-    const std::optional<std::size_t> index = ScreenList{std::move(screens)}.indexOf(saved);
-    return index ? connected[*index] : SDL_GetPrimaryDisplay();
+    const std::optional<std::size_t> index = ScreenList{std::move(screens)}.indexOf(savedScreen);
+    return index ? connectedDisplays[*index] : SDL_GetPrimaryDisplay();
 }
 
 } // namespace
 
 SdlWindow::SdlWindow(const Window::Settings& settings) {
-    if (settings.mode == WindowMode::Fullscreen) {
-        firstWindowedSize_ = settings.size;
+    if (settings.windowMode == WindowMode::Fullscreen) {
+        firstWindowedSize_ = settings.windowedSize;
     }
 #ifdef __linux__
     // Wayland first, X11 as the fallback. On a Wayland desktop the X11 route (through XWayland)
@@ -110,25 +111,27 @@ SdlWindow::SdlWindow(const Window::Settings& settings) {
     }
 
     const SDL_PropertiesID properties = SDL_CreateProperties();
-    const auto centred =
+    const auto centredPosition =
         static_cast<std::int64_t>(SDL_WINDOWPOS_CENTERED_DISPLAY(displayFor(settings.screen)));
     SDL_SetStringProperty(properties, SDL_PROP_WINDOW_CREATE_TITLE_STRING, settings.title.c_str());
-    SDL_SetNumberProperty(properties, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, settings.size.width);
-    SDL_SetNumberProperty(properties, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, settings.size.height);
-    SDL_SetNumberProperty(properties, SDL_PROP_WINDOW_CREATE_X_NUMBER, centred);
-    SDL_SetNumberProperty(properties, SDL_PROP_WINDOW_CREATE_Y_NUMBER, centred);
+    SDL_SetNumberProperty(properties, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER,
+                          settings.windowedSize.width);
+    SDL_SetNumberProperty(properties, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER,
+                          settings.windowedSize.height);
+    SDL_SetNumberProperty(properties, SDL_PROP_WINDOW_CREATE_X_NUMBER, centredPosition);
+    SDL_SetNumberProperty(properties, SDL_PROP_WINDOW_CREATE_Y_NUMBER, centredPosition);
     SDL_SetBooleanProperty(properties, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN,
-                           settings.resizable);
+                           settings.isResizable);
     SDL_SetBooleanProperty(properties, SDL_PROP_WINDOW_CREATE_HIGH_PIXEL_DENSITY_BOOLEAN, true);
     // Fullscreen covers the screen that holds the window's centre: the chosen one, as the window
     // is centred there. No fullscreen mode is ever set, so it is borderless at the screen's own
     // resolution and the screen's mode never changes.
     SDL_SetBooleanProperty(properties, SDL_PROP_WINDOW_CREATE_FULLSCREEN_BOOLEAN,
-                           settings.mode == WindowMode::Fullscreen);
-    window_ = SDL_CreateWindowWithProperties(properties);
+                           settings.windowMode == WindowMode::Fullscreen);
+    sdlWindow_ = SDL_CreateWindowWithProperties(properties);
     SDL_DestroyProperties(properties);
 
-    if (window_ == nullptr) {
+    if (sdlWindow_ == nullptr) {
         const std::string message = sdlError("could not open the window");
         SDL_Quit();
         throw StartupError{message};
@@ -136,7 +139,7 @@ SdlWindow::SdlWindow(const Window::Settings& settings) {
 }
 
 SdlWindow::~SdlWindow() {
-    SDL_DestroyWindow(window_);
+    SDL_DestroyWindow(sdlWindow_);
     SDL_Quit();
 }
 
@@ -162,16 +165,16 @@ std::vector<Window::Event> SdlWindow::waitEvents() {
 
 Size SdlWindow::pixelSize() const {
     Size size;
-    SDL_GetWindowSizeInPixels(window_, &size.width, &size.height);
+    SDL_GetWindowSizeInPixels(sdlWindow_, &size.width, &size.height);
     return size;
 }
 
 void SdlWindow::setTitle(std::string_view title) {
-    SDL_SetWindowTitle(window_, std::string{title}.c_str());
+    SDL_SetWindowTitle(sdlWindow_, std::string{title}.c_str());
 }
 
 void SdlWindow::switchFullscreen() {
-    if ((SDL_GetWindowFlags(window_) & SDL_WINDOW_FULLSCREEN) != 0) {
+    if ((SDL_GetWindowFlags(sdlWindow_) & SDL_WINDOW_FULLSCREEN) != 0) {
         leaveFullscreen();
     } else {
         enterFullscreen();
@@ -180,76 +183,76 @@ void SdlWindow::switchFullscreen() {
 
 void SdlWindow::enterFullscreen() {
     WindowedPlacement placement;
-    SDL_GetWindowPosition(window_, &placement.x, &placement.y);
-    SDL_GetWindowSize(window_, &placement.size.width, &placement.size.height);
-    placement.isMaximized = (SDL_GetWindowFlags(window_) & SDL_WINDOW_MAXIMIZED) != 0;
+    SDL_GetWindowPosition(sdlWindow_, &placement.x, &placement.y);
+    SDL_GetWindowSize(sdlWindow_, &placement.size.width, &placement.size.height);
+    placement.isMaximized = (SDL_GetWindowFlags(sdlWindow_) & SDL_WINDOW_MAXIMIZED) != 0;
     windowedPlacement_ = placement;
 
     // Borderless, on the screen that holds the window's centre (see the constructor).
-    SDL_SetWindowFullscreen(window_, true);
+    SDL_SetWindowFullscreen(sdlWindow_, true);
     // Some systems switch a moment later; waiting keeps the window's state up to date for the next
     // switch.
-    SDL_SyncWindow(window_);
+    SDL_SyncWindow(sdlWindow_);
 }
 
 void SdlWindow::leaveFullscreen() {
-    const SDL_DisplayID screen = SDL_GetDisplayForWindow(window_);
-    SDL_SetWindowFullscreen(window_, false);
+    const SDL_DisplayID display = SDL_GetDisplayForWindow(sdlWindow_);
+    SDL_SetWindowFullscreen(sdlWindow_, false);
     // Wait until the window has left fullscreen, so the requests below apply to the window.
-    SDL_SyncWindow(window_);
+    SDL_SyncWindow(sdlWindow_);
 
     // The system may ignore a position (Wayland always does): nothing is reported or retried.
     if (windowedPlacement_) {
         if (windowedPlacement_->isMaximized) {
-            SDL_MaximizeWindow(window_);
+            SDL_MaximizeWindow(sdlWindow_);
         } else {
-            SDL_SetWindowSize(window_, windowedPlacement_->size.width,
+            SDL_SetWindowSize(sdlWindow_, windowedPlacement_->size.width,
                               windowedPlacement_->size.height);
-            SDL_SetWindowPosition(window_, windowedPlacement_->x, windowedPlacement_->y);
+            SDL_SetWindowPosition(sdlWindow_, windowedPlacement_->x, windowedPlacement_->y);
         }
     } else if (firstWindowedSize_) {
-        const auto centred = static_cast<int>(SDL_WINDOWPOS_CENTERED_DISPLAY(screen));
-        SDL_SetWindowSize(window_, firstWindowedSize_->width, firstWindowedSize_->height);
-        SDL_SetWindowPosition(window_, centred, centred);
+        const auto centredPosition = static_cast<int>(SDL_WINDOWPOS_CENTERED_DISPLAY(display));
+        SDL_SetWindowSize(sdlWindow_, firstWindowedSize_->width, firstWindowedSize_->height);
+        SDL_SetWindowPosition(sdlWindow_, centredPosition, centredPosition);
     }
-    SDL_SyncWindow(window_);
+    SDL_SyncWindow(sdlWindow_);
 }
 
 Screen SdlWindow::screen() const {
-    const SDL_DisplayID display = SDL_GetDisplayForWindow(window_);
+    const SDL_DisplayID display = SDL_GetDisplayForWindow(sdlWindow_);
     return display == 0 ? Screen{} : screenOf(display);
 }
 
 Window::NativeHandles SdlWindow::nativeHandles() const {
-    const SDL_PropertiesID properties = SDL_GetWindowProperties(window_);
+    const SDL_PropertiesID properties = SDL_GetWindowProperties(sdlWindow_);
 #ifdef _WIN32
     return {.kind = Window::NativeHandles::Kind::Windows,
-            .window =
+            .windowHandle =
                 SDL_GetPointerProperty(properties, SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr),
-            .display = nullptr};
+            .displayConnection = nullptr};
 #elif defined(__APPLE__)
     return {.kind = Window::NativeHandles::Kind::Cocoa,
-            .window =
+            .windowHandle =
                 SDL_GetPointerProperty(properties, SDL_PROP_WINDOW_COCOA_WINDOW_POINTER, nullptr),
-            .display = nullptr};
+            .displayConnection = nullptr};
 #else
-    const std::string_view driver{SDL_GetCurrentVideoDriver()};
-    if (driver == "wayland") {
+    const std::string_view videoDriver{SDL_GetCurrentVideoDriver()};
+    if (videoDriver == "wayland") {
         return {.kind = Window::NativeHandles::Kind::Wayland,
-                .window = SDL_GetPointerProperty(properties,
-                                                 SDL_PROP_WINDOW_WAYLAND_SURFACE_POINTER, nullptr),
-                .display = SDL_GetPointerProperty(
+                .windowHandle = SDL_GetPointerProperty(
+                    properties, SDL_PROP_WINDOW_WAYLAND_SURFACE_POINTER, nullptr),
+                .displayConnection = SDL_GetPointerProperty(
                     properties, SDL_PROP_WINDOW_WAYLAND_DISPLAY_POINTER, nullptr)};
     }
-    if (driver != "x11") {
+    if (videoDriver != "x11") {
         return {}; // an unexpected video driver: no handle a renderer could use
     }
     // An X11 window is a number, which the renderer expects in a pointer-sized handle.
     const auto x11Window = static_cast<std::uintptr_t>(
         SDL_GetNumberProperty(properties, SDL_PROP_WINDOW_X11_WINDOW_NUMBER, 0));
     return {.kind = Window::NativeHandles::Kind::X11,
-            .window = std::bit_cast<void*>(x11Window),
-            .display =
+            .windowHandle = std::bit_cast<void*>(x11Window),
+            .displayConnection =
                 SDL_GetPointerProperty(properties, SDL_PROP_WINDOW_X11_DISPLAY_POINTER, nullptr)};
 #endif
 }

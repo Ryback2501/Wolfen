@@ -38,13 +38,13 @@ TEST_CASE("The version looks like vX.Y.Z", "[version]") {
 }
 
 TEST_CASE("Running the game prints 'Wolfen <version>' on exactly one line", "[game]") {
-    FakeGraphicsSystem graphics;
-    const GameRun run{graphics};
+    FakeGraphicsSystem graphicsSystem;
+    const GameRun run{graphicsSystem};
     REQUIRE(run.out() == "Wolfen " + versionFileText() + "\n");
 }
 
 TEST_CASE("Running the game ends normally", "[game]") {
-    FakeGraphicsSystem graphics;
-    const GameRun run{graphics};
+    FakeGraphicsSystem graphicsSystem;
+    const GameRun run{graphicsSystem};
     REQUIRE(run.outcome() == Game::Outcome::Ended);
 }

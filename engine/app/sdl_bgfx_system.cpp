@@ -10,18 +10,19 @@ SdlBgfxSystem::openWindow(const platform::Window::Settings& settings) {
     return std::make_unique<platform::SdlWindow>(settings);
 }
 
-std::vector<render::Backend> SdlBgfxSystem::availableBackends() const {
-    return render::BgfxRenderer::availableBackends();
+std::vector<render::GraphicsApi> SdlBgfxSystem::availableGraphicsApis() const {
+    return render::BgfxRenderer::availableGraphicsApis();
 }
 
 std::unique_ptr<render::Renderer>
-SdlBgfxSystem::startRenderer(platform::Window& window, std::optional<render::Backend> backend) {
-    return std::make_unique<render::BgfxRenderer>(window, backend);
+SdlBgfxSystem::startRenderer(platform::Window& window,
+                             std::optional<render::GraphicsApi> graphicsApi) {
+    return std::make_unique<render::BgfxRenderer>(window, graphicsApi);
 }
 
 std::unique_ptr<render::Renderer> SdlBgfxSystem::startCpuRenderer(platform::Window& window,
-                                                                  render::Backend backend) {
-    return std::make_unique<render::BgfxRenderer>(window, backend,
+                                                                  render::GraphicsApi graphicsApi) {
+    return std::make_unique<render::BgfxRenderer>(window, graphicsApi,
                                                   render::BgfxRenderer::Device::Cpu);
 }
 

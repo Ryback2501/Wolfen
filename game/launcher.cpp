@@ -17,25 +17,26 @@ namespace wolfen::game {
 
 using engine::app::GraphicsSystem;
 using engine::platform::Screen;
-using engine::render::Backend;
+using engine::render::GraphicsApi;
 
-Launcher::Launcher(std::ostream& out, std::ostream& err, GraphicsSystem& graphics,
+Launcher::Launcher(std::ostream& out, std::ostream& err, GraphicsSystem& graphicsSystem,
                    std::optional<std::filesystem::path> gameFolder)
-    : out_{&out}, err_{&err}, graphics_{&graphics}, gameFolder_{std::move(gameFolder)} {}
+    : out_{&out}, err_{&err}, graphicsSystem_{&graphicsSystem}, gameFolder_{std::move(gameFolder)} {
+}
 
 int Launcher::run(std::span<const std::string_view> args) {
-    const std::vector<Backend> available = graphics_->availableBackends();
-    const CommandLine commandLine{args, available};
+    const std::vector<GraphicsApi> availableGraphicsApis = graphicsSystem_->availableGraphicsApis();
+    const CommandLine commandLine{args, availableGraphicsApis};
 
     switch (commandLine.action()) {
     case CommandLine::Action::Help:
-        *out_ << CommandLine::usage(available);
+        *out_ << CommandLine::usage(availableGraphicsApis);
         return 0;
     case CommandLine::Action::Version:
         *out_ << Game::name() << '\n';
         return 0;
     case CommandLine::Action::Error:
-        *err_ << commandLine.error() << '\n' << CommandLine::hint() << '\n';
+        *err_ << commandLine.errorMessage() << '\n' << CommandLine::hint() << '\n';
         return 1;
     case CommandLine::Action::Run:
         break;
@@ -48,17 +49,18 @@ int Launcher::run(std::span<const std::string_view> args) {
     }
     const Screen screen = settingsFile ? settingsFile->screen() : Screen{};
 
-    const std::optional<Backend> backend = commandLine.backend();
-    Game game{*out_, *err_, *graphics_};
+    const std::optional<GraphicsApi> graphicsApi = commandLine.graphicsApi();
+    Game game{*out_, *err_, *graphicsSystem_};
     const Game::Outcome outcome = commandLine.isSoftwareAsked()
                                       ? game.runOnCpu(commandLine.windowMode(), screen)
-                                      : game.run(backend, commandLine.windowMode(), screen);
+                                      : game.run(graphicsApi, commandLine.windowMode(), screen);
     switch (outcome) {
     case Game::Outcome::Ended:
         saveScreen(settingsFile, game.screenAtQuit());
         return 0;
-    case Game::Outcome::ChosenRendererFailed:
-        *err_ << "Renderer '" << CommandLine::optionName(backend.value_or(Backend::Other))
+    case Game::Outcome::ChosenGraphicsApiFailed:
+        *err_ << "Renderer '"
+              << CommandLine::graphicsApiName(graphicsApi.value_or(GraphicsApi::Other))
               << "' could not be started on this computer.\n";
         return 1;
     case Game::Outcome::NoCpuRenderer:
@@ -78,9 +80,9 @@ void Launcher::saveScreen(const std::optional<SettingsFile>& settingsFile,
     }
     if (!settingsFile->save(screen)) {
         // The path's own characters (UTF-8), whatever the system's code page.
-        const std::u8string path = settingsFile->path().u8string();
-        *err_ << "Warning: could not save settings to " << std::string(path.begin(), path.end())
-              << '\n';
+        const std::u8string pathText = settingsFile->path().u8string();
+        *err_ << "Warning: could not save settings to "
+              << std::string(pathText.begin(), pathText.end()) << '\n';
     }
 }
 

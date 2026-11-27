@@ -1,8 +1,8 @@
 #include "render/bgfx_renderer.hpp"
 
 #include "core/startup_error.hpp"
-#include "render/renderer_name.hpp"
-#include "render/renderer_table.hpp"
+#include "render/graphics_api_name.hpp"
+#include "render/graphics_api_table.hpp"
 
 #include <bgfx/bgfx.h>
 
@@ -19,15 +19,15 @@ namespace {
 constexpr bgfx::ViewId mainView = 0;
 constexpr std::uint32_t resetFlags = BGFX_RESET_VSYNC; // one frame per screen refresh
 
-// The backend for a bgfx renderer type; Backend::Other for a type Wolfen does not name.
-Backend backendOf(bgfx::RendererType::Enum type) {
-    const RendererTable::Row* row = RendererTable::find(type);
-    return row == nullptr ? Backend::Other : row->backend;
+// The graphics API for a bgfx renderer type; GraphicsApi::Other for a type Wolfen does not name.
+GraphicsApi graphicsApiOf(bgfx::RendererType::Enum rendererType) {
+    const GraphicsApiTable::Row* row = GraphicsApiTable::row(rendererType);
+    return row == nullptr ? GraphicsApi::Other : row->graphicsApi;
 }
 
-// The bgfx renderer type for a backend; for Backend::Other, "let bgfx choose".
-bgfx::RendererType::Enum bgfxTypeOf(Backend backend) {
-    const RendererTable::Row* row = RendererTable::find(backend);
+// The bgfx renderer type for a graphics API; for GraphicsApi::Other, "let bgfx choose".
+bgfx::RendererType::Enum bgfxTypeOf(GraphicsApi graphicsApi) {
+    const GraphicsApiTable::Row* row = GraphicsApiTable::row(graphicsApi);
     return row == nullptr ? bgfx::RendererType::Count : row->bgfxType;
 }
 
@@ -55,56 +55,58 @@ constexpr std::uint16_t warpDeviceId = 0x008C;
 //   device id, and no graphics card with both its vendor and device ids.
 // WARP that bgfx falls back to by itself (Direct3D 11 retrying on a graphics card's adapter) is
 // not recognised.
-bool drawsOnCpu(const bgfx::Caps& caps) {
+bool deviceDrawsWithCpu(const bgfx::Caps& caps) {
     if (caps.vendorId == BGFX_PCI_ID_SOFTWARE_RASTERIZER ||
         (caps.vendorId == BGFX_PCI_ID_MICROSOFT && caps.deviceId == warpDeviceId)) {
         return true;
     }
-    const std::span<const bgfx::Caps::GPU> gpus{caps.gpu};
-    const auto listed = gpus.first(std::min<std::size_t>(caps.numGPUs, gpus.size()));
-    const bool isListedAsCpu = std::ranges::any_of(listed, [&caps](const bgfx::Caps::GPU& gpu) {
-        return gpu.vendorId == BGFX_PCI_ID_SOFTWARE_RASTERIZER && gpu.deviceId == caps.deviceId;
-    });
+    const std::span<const bgfx::Caps::GPU> devices{caps.gpu};
+    const auto listedDevices = devices.first(std::min<std::size_t>(caps.numGPUs, devices.size()));
+    const bool isListedAsCpu =
+        std::ranges::any_of(listedDevices, [&caps](const bgfx::Caps::GPU& gpu) {
+            return gpu.vendorId == BGFX_PCI_ID_SOFTWARE_RASTERIZER && gpu.deviceId == caps.deviceId;
+        });
     const bool isListedAsGraphicsCard =
-        std::ranges::any_of(listed, [&caps](const bgfx::Caps::GPU& gpu) {
+        std::ranges::any_of(listedDevices, [&caps](const bgfx::Caps::GPU& gpu) {
             return gpu.vendorId == caps.vendorId && gpu.deviceId == caps.deviceId;
         });
     return isListedAsCpu && !isListedAsGraphicsCard;
 }
 
 // bgfx's 0xRRGGBBAA form of a colour.
-std::uint32_t packed(Colour colour) {
+std::uint32_t packedColour(Colour colour) {
     return (std::uint32_t{colour.red} << 24U) | (std::uint32_t{colour.green} << 16U) |
            (std::uint32_t{colour.blue} << 8U) | std::uint32_t{colour.alpha};
 }
 
 } // namespace
 
-std::vector<Backend> BgfxRenderer::availableBackends() {
-    std::array<bgfx::RendererType::Enum, bgfx::RendererType::Count> types{};
-    const std::uint8_t count =
-        bgfx::getSupportedRenderers(static_cast<std::uint8_t>(types.size()), types.data());
-    std::vector<Backend> backends;
-    for (std::size_t i = 0; i < count; ++i) {
-        const Backend backend = backendOf(types.at(i));
+std::vector<GraphicsApi> BgfxRenderer::availableGraphicsApis() {
+    std::array<bgfx::RendererType::Enum, bgfx::RendererType::Count> rendererTypes{};
+    const std::uint8_t typeCount = bgfx::getSupportedRenderers(
+        static_cast<std::uint8_t>(rendererTypes.size()), rendererTypes.data());
+    std::vector<GraphicsApi> graphicsApis;
+    for (std::size_t i = 0; i < typeCount; ++i) {
+        const GraphicsApi graphicsApi = graphicsApiOf(rendererTypes.at(i));
 #ifndef _WIN32
         // bgfx also builds Direct3D outside Windows (for layers such as DXVK) and reports it as
         // supported, although it cannot start on a normal Linux desktop.
-        if (backend == Backend::Direct3D11 || backend == Backend::Direct3D12) {
+        if (graphicsApi == GraphicsApi::Direct3D11 || graphicsApi == GraphicsApi::Direct3D12) {
             continue;
         }
 #endif
-        if (backend != Backend::Other && std::ranges::find(backends, backend) == backends.end()) {
-            backends.push_back(backend);
+        if (graphicsApi != GraphicsApi::Other &&
+            std::ranges::find(graphicsApis, graphicsApi) == graphicsApis.end()) {
+            graphicsApis.push_back(graphicsApi);
         }
     }
-    return backends;
+    return graphicsApis;
 }
 
-BgfxRenderer::BgfxRenderer(const platform::Window& window, std::optional<Backend> backend,
+BgfxRenderer::BgfxRenderer(const platform::Window& window, std::optional<GraphicsApi> graphicsApi,
                            Device device) {
     const platform::Window::NativeHandles nativeHandles = window.nativeHandles();
-    if (nativeHandles.window == nullptr) {
+    if (nativeHandles.windowHandle == nullptr) {
         // bgfx would quietly start with no window at all, so stop before touching it.
         throw StartupError{"the window has no native window handle for the renderer"};
     }
@@ -114,16 +116,16 @@ BgfxRenderer::BgfxRenderer(const platform::Window& window, std::optional<Backend
     bgfx::renderFrame();
 
     bgfx::Init init;
-    // The chosen backend and nothing else, or the best one for this computer with fallback.
-    const bool backendChosen = backend.has_value() && *backend != Backend::Other;
-    init.type = backendChosen ? bgfxTypeOf(*backend) : bgfx::RendererType::Count;
-    init.fallback = !backendChosen;
+    // The chosen graphics API and nothing else, or the best one for this computer with fallback.
+    const bool hasChosenGraphicsApi = graphicsApi.has_value() && *graphicsApi != GraphicsApi::Other;
+    init.type = hasChosenGraphicsApi ? bgfxTypeOf(*graphicsApi) : bgfx::RendererType::Count;
+    init.fallback = !hasChosenGraphicsApi;
     if (device == Device::Cpu) {
         // Direct3D picks the adapter with these ids: WARP's, as other Microsoft adapters (a virtual
         // machine's or a remote session's display) may come first. bgfx looks only at the first
         // four adapters and WARP is listed last, so a computer with more misses it; this is
         // accepted. Vulkan picks the device bgfx marks with its software id: a device of type CPU.
-        if (backend == Backend::Direct3D11 || backend == Backend::Direct3D12) {
+        if (graphicsApi == GraphicsApi::Direct3D11 || graphicsApi == GraphicsApi::Direct3D12) {
             init.vendorId = BGFX_PCI_ID_MICROSOFT;
             init.deviceId = warpDeviceId;
         } else {
@@ -133,8 +135,8 @@ BgfxRenderer::BgfxRenderer(const platform::Window& window, std::optional<Backend
     init.platformData.type = nativeHandles.kind == platform::Window::NativeHandles::Kind::Wayland
                                  ? bgfx::NativeWindowHandleType::Wayland
                                  : bgfx::NativeWindowHandleType::Default;
-    init.swapChain.nwh = nativeHandles.window;
-    init.swapChain.ndt = nativeHandles.display;
+    init.swapChain.nwh = nativeHandles.windowHandle;
+    init.swapChain.ndt = nativeHandles.displayConnection;
     setSwapChainSize(init.swapChain, window.pixelSize());
     init.reset = resetFlags;
     if (!bgfx::init(init)) {
@@ -144,9 +146,10 @@ BgfxRenderer::BgfxRenderer(const platform::Window& window, std::optional<Backend
     // From here bgfx is running: if anything below fails, the destructor will not run, so shut
     // bgfx down here before the window it draws into goes away.
     try {
-        const bgfx::RendererType::Enum type = bgfx::getRendererType();
-        name_ = RendererName::display(backendOf(type), bgfx::getRendererName(type));
-        drawsWithCpu_ = drawsOnCpu(*bgfx::getCaps());
+        const bgfx::RendererType::Enum rendererType = bgfx::getRendererType();
+        displayName_ = GraphicsApiName::displayName(graphicsApiOf(rendererType),
+                                                    bgfx::getRendererName(rendererType));
+        drawsWithCpu_ = deviceDrawsWithCpu(*bgfx::getCaps());
         if (device == Device::Cpu && !drawsWithCpu_) {
             // bgfx falls back to a graphics card when it finds no CPU device.
             throw StartupError{"there is no CPU device for this renderer"};
@@ -162,8 +165,8 @@ BgfxRenderer::~BgfxRenderer() {
     bgfx::shutdown();
 }
 
-std::string_view BgfxRenderer::name() const {
-    return name_;
+std::string_view BgfxRenderer::displayName() const {
+    return displayName_;
 }
 
 bool BgfxRenderer::drawsWithCpu() const {
@@ -177,8 +180,8 @@ void BgfxRenderer::resize(Size pixelSize) {
     fitMainViewToWindow();
 }
 
-void BgfxRenderer::drawFrame(Colour background) {
-    bgfx::setViewClear(mainView, BGFX_CLEAR_COLOR, packed(background));
+void BgfxRenderer::drawFrame(Colour backgroundColour) {
+    bgfx::setViewClear(mainView, BGFX_CLEAR_COLOR, packedColour(backgroundColour));
     bgfx::touch(mainView); // the view is drawn (cleared) even with nothing submitted to it
     bgfx::frame();
 }

@@ -23,25 +23,26 @@ class Game {
   public:
     // How a run of the game ended.
     enum class Outcome : std::uint8_t {
-        Ended,                // played until the player closed it
-        ChosenRendererFailed, // the renderer it was given could not start; nothing on stderr
-        CouldNotStart,        // it could not start; "Wolfen could not start: ..." was printed
-        NoCpuRenderer,        // no renderer could start on a CPU device; nothing on stderr
+        Ended,                   // played until the player closed it
+        ChosenGraphicsApiFailed, // the graphics API it was given could not start; nothing on stderr
+        CouldNotStart,           // it could not start; "Wolfen could not start: ..." was printed
+        NoCpuRenderer,           // no renderer could start on a CPU device; nothing on stderr
     };
 
-    Game(std::ostream& out, std::ostream& err, engine::app::GraphicsSystem& graphics);
+    Game(std::ostream& out, std::ostream& err, engine::app::GraphicsSystem& graphicsSystem);
 
     // "Wolfen" and the version, for example "Wolfen v1.2.3".
     [[nodiscard]] static std::string name();
 
-    // Runs the game with the given renderer, or the best one for this computer when none is given,
-    // in a window or in fullscreen, on the given screen (with no name: the primary one), until it
-    // ends; returns how it ended. The window is closed by then.
-    Outcome run(std::optional<engine::render::Backend> backend,
+    // Runs the game with the given graphics API, or the best one for this computer when none is
+    // given, in a window or in fullscreen, on the given screen (with no name: the primary one),
+    // until it ends; returns how it ended. The window is closed by then.
+    Outcome run(std::optional<engine::render::GraphicsApi> graphicsApi,
                 engine::platform::WindowMode windowMode, const engine::platform::Screen& screen);
-    // Runs the game in a window on the primary screen, with the best renderer for this computer.
+    // Runs the game in a window on the primary screen, with the best graphics API for this
+    // computer.
     Outcome run();
-    // Runs the game like run(), but drawing with the CPU: on the first renderer, in the order
+    // Runs the game like run(), but drawing with the CPU: on the first graphics API, in the order
     // Vulkan, Direct3D 11, Direct3D 12 and among those this computer supports, that starts on a
     // CPU device. Each try has a window of its own. Ends with NoCpuRenderer, no window left open,
     // when none does.
@@ -60,15 +61,15 @@ class Game {
     // Prints the start line, then tries each way to start a renderer in turn, each in a window of
     // its own: a window whose renderer does not start closes before the next try, so no graphics
     // API ever reuses another's window. Plays with the first renderer that starts, until the game
-    // ends. Ends with `whenNoRenderer` when none starts.
+    // ends. Ends with `noRendererOutcome` when none starts.
     Outcome runWith(engine::platform::WindowMode windowMode, const engine::platform::Screen& screen,
-                    std::span<const RendererStart> starts, Outcome whenNoRenderer);
+                    std::span<const RendererStart> rendererStarts, Outcome noRendererOutcome);
     // The main loop: handles the window's events and draws a frame, until the game should end.
     static void play(engine::platform::Window& window, engine::render::Renderer& renderer);
 
     std::ostream* out_;
     std::ostream* err_;
-    engine::app::GraphicsSystem* graphics_;
+    engine::app::GraphicsSystem* graphicsSystem_;
     engine::platform::Screen screenAtQuit_;
 };
 

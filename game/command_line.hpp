@@ -2,7 +2,7 @@
 #define WOLFEN_GAME_COMMAND_LINE_HPP
 
 #include "platform/window_mode.hpp"
-#include "render/backend.hpp"
+#include "render/graphics_api.hpp"
 
 #include <cstdint>
 #include <optional>
@@ -18,40 +18,43 @@ class CommandLine {
     // What the game should do with these options.
     enum class Action : std::uint8_t { Run, Help, Version, Error };
 
-    // args: the words after the program's name. available: the renderers this computer supports.
+    // args: the words after the program's name. availableGraphicsApis: the graphics APIs this
+    // computer supports.
     CommandLine(std::span<const std::string_view> args,
-                std::span<const engine::render::Backend> available);
+                std::span<const engine::render::GraphicsApi> availableGraphicsApis);
 
     [[nodiscard]] Action action() const;
-    // For Run: the renderer asked for with --renderer, if any; never with --software.
-    [[nodiscard]] std::optional<engine::render::Backend> backend() const;
+    // For Run: the graphics API asked for with --renderer, if any; never with --software.
+    [[nodiscard]] std::optional<engine::render::GraphicsApi> graphicsApi() const;
     // For Run: Fullscreen when --fullscreen was given, Windowed otherwise.
     [[nodiscard]] engine::platform::WindowMode windowMode() const;
     // For Run: whether --software was given, so the game draws with the CPU on a renderer it
     // picks itself.
     [[nodiscard]] bool isSoftwareAsked() const;
     // For Error: the message to show, without the usage.
-    [[nodiscard]] const std::string& error() const;
+    [[nodiscard]] const std::string& errorMessage() const;
 
-    // The usage text, listing the renderers available on this computer.
-    [[nodiscard]] static std::string usage(std::span<const engine::render::Backend> available);
+    // The usage text, listing the graphics APIs available on this computer.
+    [[nodiscard]] static std::string
+    usage(std::span<const engine::render::GraphicsApi> availableGraphicsApis);
     // The one line shown after an option error, pointing to --help.
     [[nodiscard]] static std::string hint();
-    // The name of a renderer as written in --renderer, for example "vulkan".
-    [[nodiscard]] static std::string_view optionName(engine::render::Backend backend);
+    // The name of a graphics API as written in --renderer, for example "vulkan".
+    [[nodiscard]] static std::string_view graphicsApiName(engine::render::GraphicsApi graphicsApi);
 
   private:
-    // Reads the value of --renderer: the renderer it names, if Wolfen knows it and this computer
-    // supports it; otherwise records the error.
-    void readRenderer(std::string_view name, std::span<const engine::render::Backend> available);
+    // Reads the value of --renderer: the graphics API it names, if Wolfen knows it and this
+    // computer supports it; otherwise records the error.
+    void readGraphicsApi(std::string_view name,
+                         std::span<const engine::render::GraphicsApi> availableGraphicsApis);
     // Records the error to report, unless an earlier one is already recorded.
     void fail(std::string message);
 
     Action action_{Action::Run};
-    std::optional<engine::render::Backend> backend_;
+    std::optional<engine::render::GraphicsApi> graphicsApi_;
     engine::platform::WindowMode windowMode_{engine::platform::WindowMode::Windowed};
     bool isSoftwareAsked_{false};
-    std::string error_;
+    std::string errorMessage_;
 };
 
 } // namespace wolfen::game

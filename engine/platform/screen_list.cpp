@@ -6,25 +6,25 @@ namespace wolfen::engine::platform {
 
 ScreenList::ScreenList(std::vector<Screen> screens) : screens_{std::move(screens)} {}
 
-std::optional<std::size_t> ScreenList::indexOf(const Screen& saved) const {
-    if (saved.name.empty()) {
+std::optional<std::size_t> ScreenList::indexOf(const Screen& savedScreen) const {
+    if (savedScreen.name.empty()) {
         return std::nullopt;
     }
-    std::optional<std::size_t> firstWithName;
+    std::optional<std::size_t> firstIndexWithName;
     for (std::size_t index = 0; index < screens_.size(); ++index) {
         const Screen& screen = screens_[index];
-        if (screen.name != saved.name) {
+        if (screen.name != savedScreen.name) {
             continue;
         }
         // A screen whose position is unknown never equals a saved position.
-        if (saved.position && screen.position == saved.position) {
+        if (savedScreen.position && screen.position == savedScreen.position) {
             return index;
         }
-        if (!firstWithName) {
-            firstWithName = index;
+        if (!firstIndexWithName) {
+            firstIndexWithName = index;
         }
     }
-    return firstWithName;
+    return firstIndexWithName;
 }
 
 } // namespace wolfen::engine::platform

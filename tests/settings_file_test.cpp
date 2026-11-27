@@ -60,16 +60,16 @@ TEST_CASE("Saving writes two lines, screen=<name> and screen_position=<x>,<y>, i
           "[settings]") {
     const TempFolder folder;
     folder.write("settings.ini", "foo=bar\nscreen=a much longer old name\n");
-    const Screen saved{.name = "HDMI-2", .position = Point{.x = 1920, .y = 0}};
-    REQUIRE(settingsIn(folder).save(saved));
+    const Screen savedScreen{.name = "HDMI-2", .position = Point{.x = 1920, .y = 0}};
+    REQUIRE(settingsIn(folder).save(savedScreen));
     REQUIRE(folder.text("settings.ini") == "screen=HDMI-2\nscreen_position=1920,0\n");
-    REQUIRE(settingsIn(folder).screen() == saved);
+    REQUIRE(settingsIn(folder).screen() == savedScreen);
 
     const TempFolder leftAndAbove;
-    const Screen negative{.name = "DP-1", .position = Point{.x = -1920, .y = -200}};
-    REQUIRE(settingsIn(leftAndAbove).save(negative));
+    const Screen screenLeftAndAbove{.name = "DP-1", .position = Point{.x = -1920, .y = -200}};
+    REQUIRE(settingsIn(leftAndAbove).save(screenLeftAndAbove));
     REQUIRE(leftAndAbove.text("settings.ini") == "screen=DP-1\nscreen_position=-1920,-200\n");
-    REQUIRE(settingsIn(leftAndAbove).screen() == negative);
+    REQUIRE(settingsIn(leftAndAbove).screen() == screenLeftAndAbove);
 }
 
 TEST_CASE("A screen with no name is saved as screen= and read back as no saved screen",
@@ -84,10 +84,10 @@ TEST_CASE("A screen whose position is unknown is saved with an empty screen_posi
           "back with no position",
           "[settings]") {
     const TempFolder folder;
-    const Screen saved{.name = "HDMI-2", .position = std::nullopt};
-    REQUIRE(settingsIn(folder).save(saved));
+    const Screen savedScreen{.name = "HDMI-2", .position = std::nullopt};
+    REQUIRE(settingsIn(folder).save(savedScreen));
     REQUIRE(folder.text("settings.ini") == "screen=HDMI-2\nscreen_position=\n");
-    REQUIRE(settingsIn(folder).screen() == saved);
+    REQUIRE(settingsIn(folder).screen() == savedScreen);
 }
 
 TEST_CASE("The saved position is read with spaces around each number, and only the first "
@@ -106,10 +106,10 @@ TEST_CASE("A missing, empty or broken position: the screen is found by its name 
     noPositionLine.write("settings.ini", "screen=A\n");
     REQUIRE(settingsIn(noPositionLine).screen() == Screen{.name = "A", .position = std::nullopt});
 
-    for (const std::string position : {"", "garbage", "+5,0", "1.5,0", "1,2,3", "1", "1,", ",2",
-                                       "- 1,0", "99999999999,0", "0x10,0", "1;2"}) {
+    for (const std::string positionText : {"", "garbage", "+5,0", "1.5,0", "1,2,3", "1", "1,", ",2",
+                                           "- 1,0", "99999999999,0", "0x10,0", "1;2"}) {
         const TempFolder folder;
-        folder.write("settings.ini", "screen=A\nscreen_position=" + position + "\n");
+        folder.write("settings.ini", "screen=A\nscreen_position=" + positionText + "\n");
         REQUIRE(settingsIn(folder).screen() == Screen{.name = "A", .position = std::nullopt});
     }
 }
